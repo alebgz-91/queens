@@ -38,7 +38,7 @@ def clear_notes(label: str):
 
 # URL of the GOV.UK page
 # testing for Chapter 1
-url = "https://www.gov.uk/government/statistics/energy-chapter-1-digest-of-united-kingdom-energy-statistics-dukes"
+url_ch_1 = "https://www.gov.uk/government/statistics/energy-chapter-1-digest-of-united-kingdom-energy-statistics-dukes"
 
 
 def get_dukes_urls(url):
@@ -52,8 +52,7 @@ def get_dukes_urls(url):
                         "name": "table name",
                         "url": "table url.xlsx"
                     },
-        ...
-    }
+        ...}
     ```
     The parameters x,y indicate the DUKES table number and could be
     2 or three tier (i.e. 1_1_1 or 3_1). The keys in the inner dictionary
@@ -95,16 +94,18 @@ def get_dukes_urls(url):
 
 #### TESTING
 
-x = read_sheet_with_titles(dukes_tables["dukes_1_3"]["url"], sheet_name="1.3.A")
+dukes_tables_ch_1 = get_dukes_urls(url = url_ch_1)
+table = read_sheet_with_titles(dukes_tables_ch_1["dukes_1_3"]["url"],
+                               sheet_name="1.3.A")
 
-x["Column1"] = x["Column1"].apply(clear_notes)
+table["Column1"] = table["Column1"].apply(clear_notes)
 
-x["Sector"] = x["Column1"].apply(
-lambda x: if ("of which" not in x) x.split("-")[0].strip() else None
+table["Sector"] = table["Column1"].apply(
+lambda x: x.split("-")[0].strip() if ("of which" not in x) else None
 )
 
-x["Fuel"] = x["Column1"].apply(
-lambda x: if ("of which" not in x) x.split("-")[-1].strip() else None
+table["Fuel"] = table["Column1"].apply(
+    lambda x: x.split("-")[-1].strip() if ("of which" not in x) else None
 )
 
 
