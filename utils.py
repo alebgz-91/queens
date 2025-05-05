@@ -96,7 +96,7 @@ def get_dukes_urls(url):
 
 dukes_tables_ch_1 = get_dukes_urls(url = url_ch_1)
 table = read_sheet_with_titles(dukes_tables_ch_1["dukes_1_3"]["url"],
-                               sheet_name="1.3.A")
+                               sheet_name="1.3.B")
 
 table["Column1"] = table["Column1"].apply(clear_notes)
 
@@ -115,5 +115,6 @@ table["Fuel"] = table["Column1"].apply(
 
 
 
-# il bonzo è un cane
-# e il cate è anche peggio
+read_sheet_with_titles(dukes_tables_ch_1["dukes_1_3"]["url"],
+
+                       sheet_name="Contents").to_clipboard()
