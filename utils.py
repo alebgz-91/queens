@@ -91,30 +91,3 @@ def get_dukes_urls(url):
     return dukes_tables
 
 
-
-#### TESTING
-
-dukes_tables_ch_1 = get_dukes_urls(url = url_ch_1)
-table = read_sheet_with_titles(dukes_tables_ch_1["dukes_1_3"]["url"],
-                               sheet_name="1.3.B")
-
-table["Column1"] = table["Column1"].apply(clear_notes)
-
-table["Sector"] = table["Column1"].apply(
-    lambda x: x.split("-")[0].strip() if ("of which" not in x) else None
-)
-
-table["Subsector"] = table["Column1"].apply(
-    lambda x: x.split("of which")[-1].strip() if ("of which" in x) else None
-).ffill()
-
-
-table["Fuel"] = table["Column1"].apply(
-    lambda x: x.split("-")[-1].strip() if ("of which" not in x) else None
-)
-
-
-
-read_sheet_with_titles(dukes_tables_ch_1["dukes_1_3"]["url"],
-
-                       sheet_name="Contents").to_clipboard()
