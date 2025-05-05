@@ -115,3 +115,4 @@ table["Fuel"] = table["Column1"].apply(
 
 
 
+# il bonzo è un cane
