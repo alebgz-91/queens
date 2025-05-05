@@ -10,12 +10,12 @@ def read_sheet_with_titles(file_path, sheet_name):
     Wrapper of pd.read_excel that reads a worksheet from an Excel file removing any rows above
     the actual column headings.
 
-    Parameters:
-    * file_path: `io` argument in read_excel
-    * sheet_name: name of sheet to read
+    Args:
+        file_path: `io` argument in read_excel
+        sheet_name: name of sheet to read
 
     Returns:
-    a `pd.Dataframe`
+        a `pd.Dataframe`
     """
     # first row will always include title
     h = 1
@@ -31,37 +31,25 @@ def read_sheet_with_titles(file_path, sheet_name):
     return df
 
 
-def clear_notes(label: str):
-    return label.split("[")[0].strip()
-
-
-
-# URL of the GOV.UK page
-# testing for Chapter 1
-url_ch_1 = "https://www.gov.uk/government/statistics/energy-chapter-1-digest-of-united-kingdom-energy-statistics-dukes"
-
-
 def get_dukes_urls(url):
     """
     Use requests and BeautifulSoup to extract links to Excel
     files from the GOV.UK website and organise them into
     a dictionary with the following structure:
     ```
-    {
-        "dukes_x_y": {
-                        "name": "table name",
-                        "url": "table url.xlsx"
-                    },
-        ...}
-    ```
-    The parameters x,y indicate the DUKES table number and could be
-    2 or three tier (i.e. 1_1_1 or 3_1). The keys in the inner dictionary
-    are always "name" and "url".
+    {"dukes_table_no":
+        {"name": "table_name",
+        "url": "table url.xlsx"}
+    ...}
 
-    Parameters:
-    * url: the http address of the DUKES chapter
+    All the parameters are inferred from the webpage content. Table numbers
+    are extracted from the URL title as well as the table name, the URL is automatically parsed.
+
+    Args:
+        url: the HTTP address of the DUKES chapter
+
     Returns:
-    a `dict` of DUKES tables and their respective urls.
+        a dictionary of DUKES tables with their respective urls.
     """
 
 
