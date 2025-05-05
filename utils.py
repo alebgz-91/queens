@@ -101,8 +101,13 @@ table = read_sheet_with_titles(dukes_tables_ch_1["dukes_1_3"]["url"],
 table["Column1"] = table["Column1"].apply(clear_notes)
 
 table["Sector"] = table["Column1"].apply(
-lambda x: x.split("-")[0].strip() if ("of which" not in x) else None
+    lambda x: x.split("-")[0].strip() if ("of which" not in x) else None
 )
+
+table["Subsector"] = table["Column1"].apply(
+    lambda x: x.split("of which")[-1].strip() if ("of which" in x) else None
+).ffill()
+
 
 table["Fuel"] = table["Column1"].apply(
     lambda x: x.split("-")[-1].strip() if ("of which" not in x) else None
