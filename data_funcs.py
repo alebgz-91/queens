@@ -2,6 +2,7 @@ import pandas as pd
 
 from utils import *
 
+TEMPLATE_PATH_CH_1 = "data/templates/dukes_ch_1.xlsx"
 
 def transform_dukes_1_3(url: str, sheet_suffixes: list):
     """
@@ -26,7 +27,7 @@ def transform_dukes_1_3(url: str, sheet_suffixes: list):
         table.drop(columns=table.columns[0], inplace=True)
 
         # get corresponding template
-        template = pd.read_excel(io = "data/templates/dukes_ch_1.xlsx",
+        template = pd.read_excel(io = TEMPLATE_PATH_CH_1,
                                  sheet_name = f"1.3.{sheet}")
 
         # join with template
@@ -68,7 +69,7 @@ def transform_dukes_1_1_1(url: str):
     # remove raw columns labels
     table.drop(columns=[table.columns[0]], inplace=True)
 
-    template = pd.read_excel("data/templates/dukes_ch_1_xlsx",
+    template = pd.read_excel(TEMPLATE_PATH_CH_1,
                              sheet_name="1.1.1")
 
     table = pd.merge(table,
