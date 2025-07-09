@@ -1,6 +1,4 @@
 import pandas as pd
-from pandas import read_excel
-
 from utils import *
 
 TEMPLATE_PATH_CH_1 = "data/templates/dukes_ch_1.xlsx"
@@ -79,14 +77,14 @@ def transform_dukes_1_1_1(url: str, sheet_list: list):
 
 
         # flatten columns
-        res = pd.melt(out,
+        res = pd.melt(res,
                       id_vars = template.columns,
                       var_name="Year",
                       value_name="Value")
 
-        out.update({f"1_1_1_"})
+        out.update({"dukes_1_1_1": res})
 
-    return {"1.1.1." + sheet: out}
+    return out
 
 
 dukes_tables_ch_1 = get_dukes_urls(
@@ -94,25 +92,27 @@ dukes_tables_ch_1 = get_dukes_urls(
 
 url = dukes_tables_ch_1["dukes_1_1_1"]["url"]
 
-def transform_dukes_1_1_2(url: str):
+def transform_dukes_1_1_x(url: str, table_id: int):
     """
-    Clean DUKES 1.1.2 and transform to flat format.
+    Clean DUKES 1.1.x for x = 2 to 6 and transform to flat format.
 
     Args:
         url: full HTTP address of Excel table
+        table_id: the integer x identifying tables 1.1.x
 
     Returns:
         a dictionary containing the transformed sheets as a pd.DataFrame
 
     """
     # read and transpose
-    table = read_sheet_with_titles(url, sheet_name="1.1.2").T
+    table_no = "1.1." + str(table_id)
+    table = read_sheet_with_titles(url, sheet_name = table_no).T
 
     # remove raw columns labels
     table.drop(columns=[table.columns[0]], inplace=True)
 
     template = pd.read_excel(TEMPLATE_PATH_CH_1,
-                             sheet_name="1.1.2").T
+                             sheet_name=table_no).T
 
     table = pd.merge(table,
                      template,
@@ -125,8 +125,47 @@ def transform_dukes_1_1_2(url: str):
                     var_name = "Year",
                     value_name = "Value")
 
-    return {"dukes_1_1_1": table}
+    return {f"dukes_1_1_{table_id}": table}
 
 
+def transform_dukes_1_1_5(url: str):
+    """
+    Function that transforms table 1.1.5 (a multi-sheet time series of energy
+    consumption) into a single machine friendly table
+    Args:
+        url: the full HTTP address of the table
+
+    Returns:
+        a dictionary containing the transformed sheet as a single dataframe
+    """
+    # read the whole workbook to get a list of sheets
+    wb = pd.read_excel(url, sheet_name=None)
+    sheets = list(wb.keys())
+
+    # remote the non-data sheets
+    sheets = [s for s in sheets if "1.1.5" in s]
+
+    # process each sheet separately, then collate into single dataframe
+    res = pd.DataFrame()
+    for s in sheets:
+        tab = read_sheet_with_titles(url, sheet_name = s)
+
+        # encode sector from sheet name
+        sector = s.split("1.1.5")[1].strip()
+
+        # flatten columns
+        tab = pd.melt(tab,
+                      id_vars = "Year",
+                      var_name = "fuel",
+                      value_name = "energy")
+        tab["sector"] = sector
+
+        # clean up fuel names by removing notes
+        tab["fuel"] = tab["fuel"].apply(lambda x: x.split("[note")[0].strip())
+
+        # append to master df
+        res = pd.concat([res, tab], axis = 1)
+
+    return {"dukes_1_1_5": res}
 
 
