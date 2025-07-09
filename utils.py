@@ -17,17 +17,47 @@ def read_sheet_with_titles(file_path, sheet_name):
     Returns:
         a `pd.Dataframe`
     """
-    # first row will always include title
-    h = 1
-    df = pd.read_excel(file_path,
-                       sheet_name=sheet_name,
-                       header=h)
 
-    while "Unnamed" in df.columns[1]:
-        h += 1
-        df = pd.read_excel(file_path,
-                           sheet_name=sheet_name,
-                           header=h)
+    # read the workbook
+    wb = pd.ExcelFile(path)
+
+    # get the list of sheets
+    sheets = wb.sheet_names
+
+    if sheet_name is not None:
+        sheets = [sheet_name]
+
+    # parse each worksheet removing headers
+    wb_as_dict = {}
+
+    for sheet in sheets:
+        # first row will always include title
+        h = 1
+        df = wb.parse(sheet, header = h)
+
+        # if column 2 is empty then skip the sheet
+        # as this is a non-data sheet
+        if all(df[df.columns[1]].isnull()):
+            continue
+
+        # increase header until the actual table heading is reached
+        while "Unnamed" in df.columns[1]:
+            h += 1
+            df = wb.parse(sheet, header = h)
+
+        # add to dictionary
+        wb_as_dict.update({sheet: df})
+
+    # return df if specific sheet is required
+    if sheet_name is not None:
+        return wb_as_dict[sheet_name]
+    else:
+        return wb_as_dict
+
+
+
+
+
     return df
 
 
