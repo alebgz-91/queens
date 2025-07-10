@@ -4,7 +4,6 @@ from bs4 import BeautifulSoup
 import re
 
 
-
 def read_sheet_with_titles(file_path, sheet_name):
     """
     Wrapper of pd.read_excel that reads a worksheet from an Excel file removing any rows above
@@ -19,7 +18,7 @@ def read_sheet_with_titles(file_path, sheet_name):
     """
 
     # read the workbook
-    wb = pd.ExcelFile(path)
+    wb = pd.ExcelFile(file_path)
 
     # get the list of sheets
     sheets = wb.sheet_names
@@ -31,19 +30,20 @@ def read_sheet_with_titles(file_path, sheet_name):
     wb_as_dict = {}
 
     for sheet in sheets:
-        # first row will always include title
-        h = 1
-        df = wb.parse(sheet, header = h)
 
-        # if column 2 is empty then skip the sheet
-        # as this is a non-data sheet
-        if all(df[df.columns[1]].isnull()):
+        # first row will always include title
+        h = 0
+        df = wb.parse(sheet, header=h)
+
+        # skip sheet if believed to be non-data
+        # i.e. if 1 column only)
+        if (len(df.columns) == 1):
             continue
 
         # increase header until the actual table heading is reached
         while "Unnamed" in df.columns[1]:
             h += 1
-            df = wb.parse(sheet, header = h)
+            df = wb.parse(sheet, header=h)
 
         # add to dictionary
         wb_as_dict.update({sheet: df})
@@ -53,10 +53,6 @@ def read_sheet_with_titles(file_path, sheet_name):
         return wb_as_dict[sheet_name]
     else:
         return wb_as_dict
-
-
-
-
 
     return df
 
@@ -82,8 +78,7 @@ def get_dukes_urls(url):
         a dictionary of DUKES tables with their respective urls.
     """
 
-
-# Fetch the page content
+    # Fetch the page content
     response = requests.get(url)
     soup = BeautifulSoup(response.content, "html.parser")
 
@@ -95,12 +90,12 @@ def get_dukes_urls(url):
         href = link["href"]
         if href.endswith(".xlsx") or href.endswith(".xls"):
             # Extract the table number using regex
-            match = re.search(r"DUKES\s*(\d+(\.\d+)*)([a-z]*)",
+            match = re.search(r"DUKES\s*(([A-Z]|\d+)(\.\d+)*)([a-z]*)",
                               link.text,
                               re.IGNORECASE)
             if match:
                 table_number = match.group(1).replace(".", "_")
-                suffix = match.group(3)
+                suffix = match.group(4).lower()
                 key = f"dukes_{table_number}{suffix}"
                 name = link.text.strip()
                 full_url = href if href.startswith("http") else f"https://www.gov.uk{href}"
