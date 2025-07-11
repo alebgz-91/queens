@@ -4,6 +4,28 @@ from bs4 import BeautifulSoup
 import re
 
 
+def table_to_chapter(table_number, data_collection):
+    """
+    Utility that returns a chapter key for a given table number. Can be used for annex tables as well
+    Args:
+        table_number: the full table number as a string
+        data_collection: name of release (i.e. "dukes")
+
+    Returns: chapter key as a string of the form 'chapter_{chapter_no}'
+
+    """
+    first_char = table_number[0]
+
+    if first_char.isnumeric():
+        return f"chater_{first_char}"
+    else:
+        if first_char in ["I", "J"]:
+            return "chapter_1"
+        else:
+
+
+
+
 def read_sheet_with_titles(file_path, sheet_name):
     """
     Wrapper of pd.read_excel that reads a worksheet from an Excel file removing any rows above
