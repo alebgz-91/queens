@@ -22,7 +22,8 @@ def table_to_chapter(table_number, data_collection):
         if first_char in ["I", "J"]:
             return "chapter_1"
         else:
-
+            # further logic to come
+            pass
 
 
 
