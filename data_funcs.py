@@ -39,14 +39,14 @@ def process_sheet_to_frame(
 
         # get table from GOV.UK
         if map_on_cols:
-            table = (read_sheet_with_titles(file_path = url,
-                                            sheet_name = sheet)
+            table = (read_and_wrangle_wb(file_path = url,
+                                         sheet_name = sheet)
                      .set_index(var_to_melt)
                      .T
                      .reset_index(drop=False))
         else:
-            table = read_sheet_with_titles(file_path = url,
-                                           sheet_name = sheet)
+            table = read_and_wrangle_wb(file_path = url,
+                                        sheet_name = sheet)
 
         # first columns is dropped unless otherwise specified
         if table.columns[0] not in extra_id_vars:
@@ -54,8 +54,8 @@ def process_sheet_to_frame(
                        inplace=True)
 
         # get corresponding template
-        template = read_sheet_with_titles(file_path = template_file_path,
-                                          sheet_name = sheet)
+        template = read_and_wrangle_wb(file_path = template_file_path,
+                                       sheet_name = sheet)
 
         # join with template
         table = pd.merge(table,
@@ -96,7 +96,7 @@ def process_dukes_1_1_5(url: str):
     # process each sheet separately, then collate into single dataframe
     res = pd.DataFrame()
     for s in sheets:
-        tab = read_sheet_with_titles(url, sheet_name=s)
+        tab = read_and_wrangle_wb(url, sheet_name=s)
 
         # encode sector from sheet name
         sector = s.split("1.1.5")[1].strip()
@@ -139,11 +139,11 @@ def process_multi_sheets_to_frame(
         a dictionary containing the transformed sheets as a single dataframe
     """
     # read the whole workbook
-    wb = read_sheet_with_titles(url, sheet_name=None)
+    wb = read_and_wrangle_wb(url, sheet_name=None)
 
     # read the template
-    template = read_sheet_with_titles(template_file_path,
-                                      sheet_name=table_name)
+    template = read_and_wrangle_wb(template_file_path,
+                                   sheet_name=table_name)
 
     res = pd.DataFrame()
 

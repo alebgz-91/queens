@@ -27,10 +27,14 @@ def table_to_chapter(table_number, data_collection):
 
 
 
-def read_sheet_with_titles(file_path, sheet_name):
+
+def read_and_wrangle_wb(
+        file_path: str,
+        sheet_name: str):
     """
-    Wrapper of pd.read_excel that reads a worksheet from an Excel file removing any rows above
-    the actual column headings.
+    Utility that parses Excel workbooks removing header rows (rows on top of the actual data table).
+    The function can parse a single sheetf or the whole workbook, in which case it will
+    skip obviously non-data worksheets (i.e. having only one column).
 
     Args:
         file_path: `io` argument in read_excel
