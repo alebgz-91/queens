@@ -36,8 +36,8 @@ def read_sheet_with_titles(file_path, sheet_name):
         df = wb.parse(sheet, header=h)
 
         # skip sheet if believed to be non-data
-        # i.e. if 1 column only)
-        if (len(df.columns) == 1):
+        # i.e. if 1 column only
+        if len(df.columns) == 1:
             continue
 
         # increase header until the actual table heading is reached
@@ -50,7 +50,7 @@ def read_sheet_with_titles(file_path, sheet_name):
 
     # close the Excel workbook
     wb.close()
-    
+
     # return df if specific sheet is required
     if sheet_name is not None:
         return wb_as_dict[sheet_name]
@@ -104,5 +104,129 @@ def get_dukes_urls(url):
                 dukes_tables[key] = {"name": name, "url": full_url}
 
     return dukes_tables
+
+
+
+def set_dukes_config(dukes_chapter_urls: dict, dukes_templates: dict):
+    """
+    Utility function that compiles a dictionary with processing parameters
+    for each DUKES table.
+
+    Args:
+        dukes_templates: dictionary of local paths for mapping templates (by chapter)
+        dukes_chapter_urls: dictionary of URLs, with keys such as 'chapter_x' and values as the url of the chapter page
+
+    Returns:
+        a nested dict (JSON style) with initialisation parameters for preprocessing tables
+
+    """
+    # scrape the links for all tables
+    dukes_tables_urls = {}
+
+    for chapter, url in dukes_chapter_urls.items():
+        tb_urls = get_dukes_urls(url = url)
+        dukes_tables_urls.update(tb_urls)
+
+
+    # mapping table to processing method - JSON style
+    dukes_config = {
+        "chapter_1": {
+            "template_file_path": dukes_templates["chapter_1"],
+            "dukes_1_1": {
+                "f": "process_multi_sheets_to_frame",
+                "f_args": {
+                    "url": dukes_tables_urls["dukes_1_1"]["url"],
+                    "table_name": "1.1"
+                }
+            },
+
+            "dukes_1_2": {
+                "f": "process_multi_sheets_to_frame",
+                "f_args": {
+                    "url": dukes_tables_urls["dukes_1_2"]["url"],
+                    "table_name": "1.2"
+                }
+            },
+
+            "dukes_1_3": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "url": dukes_tables_urls["dukes_1_3"]["url"],
+                    "sheet_names": ["1.3.A", "1.3.B"]
+                }
+            },
+
+            "dukes_1_1_1": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "url": dukes_tables_urls["dukes_1_1_1"]["url"],
+                    "sheet_names": ["1.1.1.A", "1.1.1.B", "1.1.1.C"]
+                }
+            },
+
+            "dukes_1_1_2": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "url": dukes_tables_urls["dukes_1_1_2"]["url"],
+                    "sheet_names": ["1.1.2"],
+                    "map_on_cols": True
+                }
+            },
+
+            "dukes_1_1_3": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "url": dukes_tables_urls["dukes_1_1_3"]["url"],
+                    "sheet_names": ["1.1.3"],
+                    "map_on_cols": True
+                }
+            },
+
+            "dukes_1_1_4": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "url": dukes_tables_urls["dukes_1_1_4"]["url"],
+                    "sheet_names": ["1.1.4"],
+                    "map_on_cols": True
+                }
+            },
+
+            "dukes_1_1_5": {
+                "f": "process_dukes_1_1_5",
+                "f_args": {
+                    "url": dukes_tables_urls["dukes_1_1_5"]["url"],
+                }
+            },
+
+            "dukes_1_1_6": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "url": dukes_tables_urls["dukes_1_1_6"]["url"],
+                    "sheet_names": ["1.1.6"],
+                    "map_on_cols": True
+                }
+            },
+
+            "dukes_I_1": {
+                "f": "process_multi_sheets_to_frame",
+                "f_args": {
+                    "url": dukes_tables_urls["dukes_I_1"]["url"],
+                    "table_name": "I.1"
+                }
+            },
+
+            "dukes_J_1": {
+                "f": "process_multi_sheets_to_frame",
+                "f_args": {
+                    "url": dukes_tables_urls["dukes_J_1"]["url"],
+                    "table_name": "J.1"
+                }
+            }
+            }
+
+    }
+
+    return dukes_config
+
 
 
