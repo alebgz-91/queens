@@ -48,13 +48,15 @@ def read_sheet_with_titles(file_path, sheet_name):
         # add to dictionary
         wb_as_dict.update({sheet: df})
 
+    # close the Excel workbook
+    wb.close()
+    
     # return df if specific sheet is required
     if sheet_name is not None:
         return wb_as_dict[sheet_name]
     else:
         return wb_as_dict
 
-    return df
 
 
 def get_dukes_urls(url):
