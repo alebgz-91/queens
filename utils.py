@@ -1,0 +1,169 @@
+import pandas as pd
+import requests
+from bs4 import BeautifulSoup
+import re
+from mapping import *
+
+def table_to_chapter(table_number, data_collection):
+    """
+    Utility that returns a chapter key for a given table number. Can handle either raw table names
+    (i.e. "1.2.3") or table keys (i.e. "dukes_1_2_3").
+    Args:
+        table_number: the full table number as a string
+        data_collection: name of release (i.e. "dukes")
+
+    Returns: chapter key as a string of the form 'chapter_{chapter_no}'
+
+    """
+    # remove data collection from table_number if present
+    if data_collection in table_number:
+        table_number = (table_number
+                        .replace(data_collection, "")[1:]
+                        .replace("_", ".")
+                        .upper())
+
+    first_char = table_number[0]
+
+    if first_char.isnumeric():
+        return f"chapter_{first_char}"
+    else:
+        if first_char in ["I", "J"]:
+            return "chapter_1"
+        else:
+            # further logic to come
+            raise NotImplemented("Work in process.")
+
+
+
+
+def read_and_wrangle_wb(
+        file_path: str,
+        sheet_name: str):
+
+    """
+    Utility that parses Excel workbooks removing header rows (rows on top of the actual data table).
+    The function can parse a single sheetf or the whole workbook, in which case it will
+    skip obviously non-data worksheets (i.e. having only one column).
+
+    Args:
+        file_path: `io` argument in read_excel
+        sheet_name: name of sheet to read
+
+    Returns:
+        a `pd.Dataframe`
+    """
+
+    # read the workbook
+    wb = pd.ExcelFile(file_path)
+
+    # get the list of sheets
+    sheets = wb.sheet_names
+
+    if sheet_name is not None:
+        sheets = [sheet_name]
+
+    # parse each worksheet removing headers
+    wb_as_dict = {}
+
+    for sheet in sheets:
+
+        # first row will always include title
+        h = 0
+        df = wb.parse(sheet, header=h)
+
+        # skip sheet if believed to be non-data
+        # i.e. if 1 column only
+        if len(df.columns) == 1:
+            continue
+
+        # increase header until the actual table heading is reached
+        while "Unnamed" in df.columns[1]:
+            h += 1
+            df = wb.parse(sheet, header=h)
+
+        # add to dictionary
+        wb_as_dict.update({sheet: df})
+
+    # close the Excel workbook
+    wb.close()
+
+    # return df if specific sheet is required
+    if sheet_name is not None:
+        return wb_as_dict[sheet_name]
+    else:
+        return wb_as_dict
+
+
+#TODO: abstract the function below so that it works with other data collections
+# This also requires changing the signature to include a data_collection argument
+
+def get_dukes_urls(url):
+    """
+    Use requests and BeautifulSoup to extract links to Excel
+    files from the GOV.UK website and organise them into
+    a dictionary with the following structure:
+    ```
+    {"dukes_table_no":
+        {"name": "table_name",
+        "url": "table url.xlsx"}
+    ...}
+
+    All the parameters are inferred from the webpage content. Table numbers
+    are extracted from the URL title as well as the table name, the URL is automatically parsed.
+
+    Args:
+        url: the HTTP address of the DUKES chapter
+
+    Returns:
+        a dictionary of DUKES tables with their respective urls.
+    """
+
+    # Fetch the page content
+    response = requests.get(url)
+    soup = BeautifulSoup(response.content, "html.parser")
+
+    # Initialize the result dictionary
+    dukes_tables = {}
+
+    # Find all links to Excel files
+    for link in soup.find_all("a", href=True):
+        href = link["href"]
+        if href.endswith(".xlsx") or href.endswith(".xls"):
+            # Extract the table number using regex
+            match = re.search(r"DUKES\s*(([A-Z]|\d+)(\.\d+)*)([a-z]*)",
+                              link.text,
+                              re.IGNORECASE)
+            if match:
+                table_number = match.group(1).replace(".", "_")
+                suffix = match.group(4).lower()
+                key = f"dukes_{table_number}{suffix}"
+                name = link.text.strip()
+                full_url = href if href.startswith("http") else f"https://www.gov.uk{href}"
+                dukes_tables[key] = {"name": name, "url": full_url}
+
+    return dukes_tables
+
+
+def generate_config(data_collection: str,
+                    table_key: str,
+                    chapter_key: str):
+    # get static config dict
+    config = configs_dict[data_collection][chapter_key][table_key]
+
+    # determine table url
+    chapter_page_url = urls_dictionaries[data_collection][chapter_key]
+    url = get_dukes_urls(url=chapter_page_url)[table_key]["url"]
+
+    # determine the template file path
+    template_file_path = templates_dicts[data_collection][chapter_key]
+
+    # add url, template_path and data_collection to f_args
+    config["f_args"].update({
+        "url": url,
+        "template_file_path": template_file_path,
+        "data_collection": data_collection
+    })
+
+    return config
+
+
