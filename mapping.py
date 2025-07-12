@@ -1,7 +1,12 @@
+from utils import parse_json
+
 # -----------------------------------------------
-# This file contains static configuration JSONs
-# and dictionaries that redirect to the correct
-# configuration JSON for each item.
+# This script parses configuration files
+# from raw .json and .ini into python objects
 # These should be treated as environment vars.
 # ---------------------------------------------
 
+# load .json configuration into dictionaries of variables
+TEMPLATES = parse_json("config/templates.json")
+URLS = parse_json("config/urls.json")
+ETL_CONFIG = parse_json("config/etl_config.lson")

@@ -1,8 +1,32 @@
+import json
+
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 import re
-from mapping import *
+
+
+def parse_json(path: str):
+    """
+    Opens a .json file and loads into a dictionary
+
+    Args:
+        path: file path
+
+    Returns:
+        a dictionary of the parsed content
+
+    """
+    try:
+        with open(path, "r") as f:
+            return json.load(f)
+
+    except FileNotFoundError:
+        raise FileNotFoundError(f"JSON file not found: {path}")
+
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON format in {path}: {e}")
+
 
 def table_to_chapter(table_number, data_collection):
     """
@@ -38,19 +62,20 @@ def table_to_chapter(table_number, data_collection):
 
 def read_and_wrangle_wb(
         file_path: str,
-        sheet_name: str):
+        sheet_name: str = None):
 
     """
-    Utility that parses Excel workbooks removing header rows (rows on top of the actual data table).
-    The function can parse a single sheetf or the whole workbook, in which case it will
-    skip obviously non-data worksheets (i.e. having only one column).
+    Read Excel workbooks removing unnecessary header rows.
+    By default the function parses the whole workbook, excluding sheets with a single non-empty column.
+    Thr behaviour can be modified to read a specific sheet, in which case the function returns a dataframe
+    instead of a dictionary.
 
     Args:
         file_path: `io` argument in read_excel
         sheet_name: name of sheet to read
 
     Returns:
-        a `pd.Dataframe`
+        a dictionary of `pd.Dataframe is sheet_name = None or a pd.DataFrame otherwise`
     """
 
     # read the workbook
@@ -146,16 +171,33 @@ def get_dukes_urls(url):
 
 def generate_config(data_collection: str,
                     table_key: str,
-                    chapter_key: str):
+                    chapter_key: str,
+                    templates: dict,
+                    urls: dict,
+                    etl_config: dict):
+    """
+    Generates a dictionary with all necessary information for the ETL to run properly on a table.
+    This requires environment variables to be set correctly in the config/ directory.
+    Args:
+        data_collection: the collection the table belongs to
+        table_key: table key in the form data_collection + "_" + table number
+        chapter_key: chapter of the table in the form "chapter_x"
+        templates: dictionary of templates by data_collection. Should be set in config/.
+        urls: dictionary of URLs for individual chapter by data_collections. Should be set in config/.
+        etl_config: detailed runtime parameters for the ETL. Should be set in config/.
+
+    Returns:
+
+    """
     # get static config dict
-    config = configs_dict[data_collection][chapter_key][table_key]
+    config = etl_config[data_collection][chapter_key][table_key]
 
     # determine table url
-    chapter_page_url = urls_dictionaries[data_collection][chapter_key]
+    chapter_page_url = urls[data_collection][chapter_key]
     url = get_dukes_urls(url=chapter_page_url)[table_key]["url"]
 
     # determine the template file path
-    template_file_path = templates_dicts[data_collection][chapter_key]
+    template_file_path = templates[data_collection][chapter_key]
 
     # add url, template_path and data_collection to f_args
     config["f_args"].update({
