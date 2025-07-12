@@ -2,11 +2,12 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 import re
-
+from mapping import *
 
 def table_to_chapter(table_number, data_collection):
     """
-    Utility that returns a chapter key for a given table number. Can be used for annex tables as well
+    Utility that returns a chapter key for a given table number. Can handle either raw table names
+    (i.e. "1.2.3") or table keys (i.e. "dukes_1_2_3").
     Args:
         table_number: the full table number as a string
         data_collection: name of release (i.e. "dukes")
@@ -14,16 +15,23 @@ def table_to_chapter(table_number, data_collection):
     Returns: chapter key as a string of the form 'chapter_{chapter_no}'
 
     """
+    # remove data collection from table_number if present
+    if data_collection in table_number:
+        table_number = (table_number
+                        .replace(data_collection, "")[1:]
+                        .replace("_", ".")
+                        .upper())
+
     first_char = table_number[0]
 
     if first_char.isnumeric():
-        return f"chater_{first_char}"
+        return f"chapter_{first_char}"
     else:
         if first_char in ["I", "J"]:
             return "chapter_1"
         else:
             # further logic to come
-            pass
+            raise NotImplemented("Work in process.")
 
 
 
@@ -31,6 +39,7 @@ def table_to_chapter(table_number, data_collection):
 def read_and_wrangle_wb(
         file_path: str,
         sheet_name: str):
+
     """
     Utility that parses Excel workbooks removing header rows (rows on top of the actual data table).
     The function can parse a single sheetf or the whole workbook, in which case it will
@@ -85,6 +94,8 @@ def read_and_wrangle_wb(
         return wb_as_dict
 
 
+#TODO: abstract the function below so that it works with other data collections
+# This also requires changing the signature to include a data_collection argument
 
 def get_dukes_urls(url):
     """
@@ -133,127 +144,26 @@ def get_dukes_urls(url):
     return dukes_tables
 
 
+def generate_config(data_collection: str,
+                    table_key: str,
+                    chapter_key: str):
+    # get static config dict
+    config = configs_dict[data_collection][chapter_key][table_key]
 
-def set_dukes_config(dukes_chapter_urls: dict, dukes_templates: dict):
-    """
-    Utility function that compiles a dictionary with processing parameters
-    for each DUKES table.
+    # determine table url
+    chapter_page_url = urls_dictionaries[data_collection][chapter_key]
+    url = get_dukes_urls(url=chapter_page_url)[table_key]["url"]
 
-    Args:
-        dukes_templates: dictionary of local paths for mapping templates (by chapter)
-        dukes_chapter_urls: dictionary of URLs, with keys such as 'chapter_x' and values as the url of the chapter page
+    # determine the template file path
+    template_file_path = templates_dicts[data_collection][chapter_key]
 
-    Returns:
-        a nested dict (JSON style) with initialisation parameters for preprocessing tables
+    # add url, template_path and data_collection to f_args
+    config["f_args"].update({
+        "url": url,
+        "template_file_path": template_file_path,
+        "data_collection": data_collection
+    })
 
-    """
-    # scrape the links for all tables
-    dukes_tables_urls = {}
-
-    for chapter, url in dukes_chapter_urls.items():
-        tb_urls = get_dukes_urls(url = url)
-        dukes_tables_urls.update(tb_urls)
-
-
-    # mapping table to processing method - JSON style
-    dukes_config = {
-        "chapter_1": {
-            "template_file_path": dukes_templates["chapter_1"],
-            "dukes_1_1": {
-                "f": "process_multi_sheets_to_frame",
-                "f_args": {
-                    "url": dukes_tables_urls["dukes_1_1"]["url"],
-                    "table_name": "1.1"
-                }
-            },
-
-            "dukes_1_2": {
-                "f": "process_multi_sheets_to_frame",
-                "f_args": {
-                    "url": dukes_tables_urls["dukes_1_2"]["url"],
-                    "table_name": "1.2"
-                }
-            },
-
-            "dukes_1_3": {
-                "f": "process_sheet_to_frame",
-                "f_args": {
-                    "url": dukes_tables_urls["dukes_1_3"]["url"],
-                    "sheet_names": ["1.3.A", "1.3.B"]
-                }
-            },
-
-            "dukes_1_1_1": {
-                "f": "process_sheet_to_frame",
-                "f_args": {
-                    "url": dukes_tables_urls["dukes_1_1_1"]["url"],
-                    "sheet_names": ["1.1.1.A", "1.1.1.B", "1.1.1.C"]
-                }
-            },
-
-            "dukes_1_1_2": {
-                "f": "process_sheet_to_frame",
-                "f_args": {
-                    "url": dukes_tables_urls["dukes_1_1_2"]["url"],
-                    "sheet_names": ["1.1.2"],
-                    "map_on_cols": True
-                }
-            },
-
-            "dukes_1_1_3": {
-                "f": "process_sheet_to_frame",
-                "f_args": {
-                    "url": dukes_tables_urls["dukes_1_1_3"]["url"],
-                    "sheet_names": ["1.1.3"],
-                    "map_on_cols": True
-                }
-            },
-
-            "dukes_1_1_4": {
-                "f": "process_sheet_to_frame",
-                "f_args": {
-                    "url": dukes_tables_urls["dukes_1_1_4"]["url"],
-                    "sheet_names": ["1.1.4"],
-                    "map_on_cols": True
-                }
-            },
-
-            "dukes_1_1_5": {
-                "f": "process_dukes_1_1_5",
-                "f_args": {
-                    "url": dukes_tables_urls["dukes_1_1_5"]["url"],
-                }
-            },
-
-            "dukes_1_1_6": {
-                "f": "process_sheet_to_frame",
-                "f_args": {
-                    "url": dukes_tables_urls["dukes_1_1_6"]["url"],
-                    "sheet_names": ["1.1.6"],
-                    "map_on_cols": True
-                }
-            },
-
-            "dukes_I_1": {
-                "f": "process_multi_sheets_to_frame",
-                "f_args": {
-                    "url": dukes_tables_urls["dukes_I_1"]["url"],
-                    "table_name": "I.1"
-                }
-            },
-
-            "dukes_J_1": {
-                "f": "process_multi_sheets_to_frame",
-                "f_args": {
-                    "url": dukes_tables_urls["dukes_J_1"]["url"],
-                    "table_name": "J.1"
-                }
-            }
-            }
-
-    }
-
-    return dukes_config
-
+    return config
 
 

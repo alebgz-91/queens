@@ -1,61 +1,79 @@
-from IGNORE_dev_notebook import data_collection
-from utils import set_dukes_config, table_to_chapter
+from utils import table_to_chapter, generate_config
 import data_funcs as pr
-from mapping import DUKES_TEMPLATES, DUKES_CHAPTERS_URLS
+from mapping import configs_dict
+
 
 # Initial main script to execute processing for specified tables
 
 def update_tables(
         data_collection: str,
-        table_list: list):
-    # generate config dictionary
-    dukes_config = set_dukes_config(dukes_templates=DUKES_TEMPLATES,
-                                    dukes_chapter_urls=DUKES_CHAPTERS_URLS)
+        table_list: list,
+        raw_table_names=True):
+    """
+    Update a selection of tables, fetching new data from source URLs.
+
+    Args:
+        data_collection: name of the release the tables belong to. Myst be lowercase
+        table_list: a list or iterable of tables to be parsed and updated
+        raw_table_names: if False, table_list contains table_keys rather than table numbers, for example "dukes_1_2_3
+ instead of "1.2.3"
+    Returns:
+        True if the processing is successful
+
+    """
 
     for table in table_list:
 
-        # generate keys to fetch config
-        table_key = data_collection + "_" + table.replace(".", "_")
+        if raw_table_names:
+            # generate keys to fetch config
+            table_key = data_collection + "_" + table.replace(".", "_")
+        else:
+            table_key = table
 
-        #TODO - validate table name
+        # TODO - validate table name
         # Need to create an auxiliary function to check if the table exists or not
 
         chapter_key = table_to_chapter(table_number=table,
                                        data_collection=data_collection)
 
+        # generate config dictionary
+        config = generate_config(data_collection=data_collection,
+                                 table_key=table_key,
+                                 chapter_key=chapter_key)
 
-
-        # chapter templates
-        template_file_path = dukes_config[chapter_key]["template_file_path"]
-
-        # function name and args
-        f_name = dukes_config[chapter_key][table_key]["f"]
-        f_args = dukes_config[chapter_key][table_key]["f_args"]
-
-        # additional_args
-        f_args.update({
-            "data_collection": data_collection,
-            "template_file_path": template_file_path
-        })
-
-        # get callable from module
+        # retrieve function callable and args
+        f_name = config["f"]
+        f_args = config["f_args"]
         f_call = getattr(pr, f_name)
+
+        # execute
         res = f_call(**f_args)
 
-        #TODO code that will write tables to DB
+        # TODO code that will write tables to DB
         # Need to wrap this into a separate module
 
-        # placeholder for the time being
+        # placeholder for the time being: return results
         print(res.keys())
+
+    return True
 
 
 def update_all_tables(data_collection: str):
+    # to get the list of tables look at static config files
+    config = configs_dict[data_collection]
 
-    config = set_dukes_config(dukes_templates=DUKES_TEMPLATES, dukes_chapter_urls=DUKES_CHAPTERS_URLS)
+    # go through each chapter and table
+    for chapter_key in config.keys():
+        chapter_print_name = chapter_key.replace("_", " ").title()
+        print(f"Updating {chapter_print_name}...")
 
-    # pass the list of keys to the update_tables function
-    update_tables(data_collection = data_collection,
-                  table_list=config.keys())
+        # execute
+        table_list = config[chapter_key].keys()
+
+        res = update_tables(data_collection=data_collection,
+                            table_list=table_list,
+                            raw_table_names=False)
+    return True
 
 
 
