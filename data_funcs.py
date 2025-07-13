@@ -1,15 +1,13 @@
 from utils import *
 
-template_file_path = "data/templates/dukes_ch_1.xlsx"
-
 
 def process_sheet_to_frame(
         url: str,
-        template_file_path:str,
+        template_file_path: str,
         data_collection: str,
         sheet_names: list,
         var_to_melt: str = "Year",
-        extra_id_vars: list = [],
+        extra_id_vars: list = None,
         map_on_cols: bool = False):
     """
     A chapter-agnostic function that processes individual sheets into separate frames.
@@ -19,18 +17,20 @@ def process_sheet_to_frame(
     headings through a template if needed.
 
     Args:
+        sheet_names: list of sheets to be processed
+        template_file_path: local path of mapping template
         url: the full HTML path of the workbook
         data_collection: name of the series the workbook belongs to (i.e. "dukes")        sheet_names: list of sheets to be processed
         var_to_melt: if map_on_cols is False, this is the name of the variable on the columns, otherwise is the name of the index column. Default is "Year"
-        extra_id_vars: additional columns to be used as id_vars. Not usable if map_on_cols is Trye,
-        map_on_cols: whether to transpopse the table before mapping to the template. Default is False.
+        extra_id_vars: additional columns to be used as id_vars. Not usable if map_on_cols is True,
+        map_on_cols: whether to transpose the table before mapping to the template. Default is False.
 
     Returns:
 
     """
 
-    # if wishing to use mapping on cols then cannot allow exta id_vars
-    if map_on_cols and (len(extra_id_vars) != 0):
+    # if wishing to use mapping on cols then cannot allow extra id_vars
+    if map_on_cols and (extra_id_vars is not None):
         raise ValueError("Cannot include extra id vars while transposing: use the mapping template instead.")
 
     out = {}
@@ -132,6 +132,8 @@ def process_multi_sheets_to_frame(
     The function has special conditional behaviour for some tables that require extra manipulation.
 
     Args:
+        data_collection: name of collection the table belongs to
+        template_file_path: local path of mapping template
         url: the full HTTP address of the table
         table_name: the DUKES table number (x.y.z)
 
@@ -139,7 +141,7 @@ def process_multi_sheets_to_frame(
         a dictionary containing the transformed sheets as a single dataframe
     """
     # read the whole workbook
-    wb = read_and_wrangle_wb(url, sheet_name=None)
+    wb = read_and_wrangle_wb(url)
 
     # read the template
     template = read_and_wrangle_wb(template_file_path,
@@ -148,7 +150,7 @@ def process_multi_sheets_to_frame(
     res = pd.DataFrame()
 
     # process each sheet
-    # note that there will be unwanted wheets, hence we need to exclude them
+    # note that there will be unwanted sheets, hence we need to exclude them
     for sheet in wb.keys():
 
         # skip all sheets named not like a year

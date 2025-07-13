@@ -1,6 +1,6 @@
 from utils import table_to_chapter, generate_config
 import data_funcs as pr
-from mapping import configs_dict
+from mapping import TEMPLATES, ETL_CONFIG, URLS
 
 
 # Initial main script to execute processing for specified tables
@@ -38,8 +38,11 @@ def update_tables(
 
         # generate config dictionary
         config = generate_config(data_collection=data_collection,
-                                 table_key=table_key,
-                                 chapter_key=chapter_key)
+                                 table_key = table_key,
+                                 chapter_key=chapter_key,
+                                 templates=TEMPLATES,
+                                 urls=URLS,
+                                 etl_config=ETL_CONFIG)
 
         # retrieve function callable and args
         f_name = config["f"]
@@ -60,7 +63,7 @@ def update_tables(
 
 def update_all_tables(data_collection: str):
     # to get the list of tables look at static config files
-    config = configs_dict[data_collection]
+    config = ETL_CONFIG[data_collection]
 
     # go through each chapter and table
     for chapter_key in config.keys():
@@ -74,6 +77,3 @@ def update_all_tables(data_collection: str):
                             table_list=table_list,
                             raw_table_names=False)
     return True
-
-
-
