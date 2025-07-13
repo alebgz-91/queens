@@ -1,4 +1,4 @@
-from utils import table_to_chapter, generate_config
+from utils import table_to_chapter, generate_config, check_inputs
 import data_funcs as pr
 from mapping import TEMPLATES, ETL_CONFIG, URLS
 
@@ -30,8 +30,13 @@ def update_tables(
         else:
             table_key = table
 
-        # TODO - validate table name
-        # Need to create an auxiliary function to check if the table exists or not
+        try:
+            validation=check_inputs(data_collection=data_collection,
+                                    table_key=table_key,
+                                    etl_config=ETL_CONFIG)
+        except ValueError as E:
+            print(f"Incorrect Imput: {E}")
+            return None
 
         chapter_key = table_to_chapter(table_number=table,
                                        data_collection=data_collection)
@@ -58,7 +63,7 @@ def update_tables(
         # placeholder for the time being: return results
         print(res.keys())
 
-    return True
+    return res
 
 
 def update_all_tables(data_collection: str):
