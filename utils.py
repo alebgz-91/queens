@@ -66,7 +66,7 @@ def read_and_wrangle_wb(
 
     """
     Read Excel workbooks removing unnecessary header rows.
-    By default the function parses the whole workbook, excluding sheets with a single non-empty column.
+    By default, the function parses the whole workbook, excluding sheets with a single non-empty column.
     Thr behaviour can be modified to read a specific sheet, in which case the function returns a dataframe
     instead of a dictionary.
 
@@ -209,3 +209,25 @@ def generate_config(data_collection: str,
     return config
 
 
+
+
+def check_inputs (data_collection,table_key,etl_config):
+    """
+    Function that checks if a table is found in the ETL_CONFIG file
+    Args:
+        data_collection: Name of the data_collection
+        table_key: Name of the table
+        etl_config: dictionary of ETL configuration
+
+    Returns: True if data_collection and table_key are found
+    Raises:
+        ValueError if either data_collection or table_key are not found
+
+    """
+    if data_collection not in etl_config:
+        raise ValueError(f"{data_collection} data not found")
+    else:
+        for chapter_key in etl_config[data_collection]:
+                if table_key not in etl_config[data_collection][chapter_key]:
+                    raise ValueError(f"{table_key} value not found in {data_collection}")
+    return True
