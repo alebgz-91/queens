@@ -1,5 +1,6 @@
-from utils import table_to_chapter, generate_config, check_inputs
+from utils import table_to_chapter,, check_inputs
 from etl import transformations as pr
+from etl.input_output import generate_config
 from config.settings import TEMPLATES, ETL_CONFIG, URLS
 
 
