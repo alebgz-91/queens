@@ -1,4 +1,8 @@
-from utils import *
+from dask.array.reshape import expand_tuple
+
+from etl.input_output import read_and_wrangle_wb
+from utils import table_key_to_name
+import pandas as pd
 
 
 def process_sheet_to_frame(
@@ -188,3 +192,67 @@ def process_multi_sheets_to_frame(
 
     output_name = data_collection  + "_" + table_name.replace(".", "_")
     return {output_name: res}
+
+
+
+def enforce_schema(data_collection: str, table_key: str, df: pd.DataFrame, schema_dict: dict):
+
+    schema = schema_dict[data_collection]
+
+    # keep track of index cols
+    index_cols = list(df.index.names)
+
+    # add id cols as a column
+    table_name = table_key_to_name(table_key=table_key,
+                                   data_collection=data_collection)
+    df["table_name"] = table_name
+    df["data_collection"] = data_collection
+
+    index_cols = index_cols + [data_collection, table_name]
+
+    # check data types and cast
+    for col_name in df:
+
+        if col_name not in schema:
+            raise ValueError(f"Unexpected column not in schema for table {table_key}: {col_name}")
+
+        exp_dtype = schema[col_name]["type"]
+        exp_null = schema[col_name]["nullable"]
+
+        if exp_dtype == "float":
+            df[col_name] = pd.to_numeric(df[col_name],
+                                         errors="coerce")
+
+            # check that the conversion has gone well. Some nulls are expected
+            # due to suppression symbols being present in the data
+            # but there should be non-null values
+            non_null_count = df[col_name].notnull().sum()
+            if non_null_count == 0:
+                raise ValueError(f"Values cannot be parse to numeric data. Check transformator for table {table_key}.")
+        elif exp_dtype == "int":
+            df[col_name] = pd.to_numeric(df[col_name],
+                                             errors="coerce",
+                                             downcast="integer")
+        elif exp_dtype == "str":
+            df[col_name] = df[col_name].astype(str)
+        else:
+            # no action for now, will likely need to handle further types
+            pass
+
+            # check nullability
+            n_rows = len(df)
+            n_non_nulls = df[col_name].notnull().sum()
+            if (n_rows > n_non_nulls) and (not exp_null):
+                raise ValueError(f"Column {col_name} is not nullable but NULLs were found.")
+
+        # now chec that none of the mandatory columns are missing
+        for col_name in schema:
+            if schema[col_name]["index"] and (col_name not in df):
+                raise IndexError(f"Missing index column in {table_key}: {col_name}")
+
+    return df.set_index(index_cols)
+
+
+
+
+
