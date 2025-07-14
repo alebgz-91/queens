@@ -1,5 +1,3 @@
-from dask.array.reshape import expand_tuple
-
 from etl.input_output import read_and_wrangle_wb
 from utils import table_key_to_name
 import pandas as pd
@@ -244,11 +242,6 @@ def enforce_schema(data_collection: str, table_key: str, df: pd.DataFrame, schem
             n_non_nulls = df[col_name].notnull().sum()
             if (n_rows > n_non_nulls) and (not exp_null):
                 raise ValueError(f"Column {col_name} is not nullable but NULLs were found.")
-
-        # now chec that none of the mandatory columns are missing
-        for col_name in schema:
-            if schema[col_name]["index"] and (col_name not in df):
-                raise IndexError(f"Missing index column in {table_key}: {col_name}")
 
     return df.set_index(index_cols)
 
