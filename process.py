@@ -1,6 +1,6 @@
 from utils import table_to_chapter, generate_config, check_inputs
 import data_funcs as pr
-from mapping import TEMPLATES, ETL_CONFIG, URLS
+from config.settings import TEMPLATES, ETL_CONFIG, URLS
 
 
 # Initial main script to execute processing for specified tables

@@ -1,0 +1,18 @@
+{
+  "dukes": {
+
+    "data_collection": {"type": "str", "nullable": false},
+    "table_name": {"type": "str", "nullable": false},
+    "row": {"type": "int", "nullable": false},
+    "label": {"type": "str", "nullable": false},
+    "year": {"type": "int", "nullable": false},
+    "group":  {"type":  "str", "nullable":  true},
+    "subgroup": {"type": "str", "nullable": true},
+    "category": {"type": "str", "nullable": true},
+    "item": {"type": "str", "nullable": true},
+    "sector": {"type": "str", "nullable": true},
+    "subsector": {"type": "str", "nullable": true},
+    "fuel": {"type": "str", "nullable": true},
+    "unit": {"type": "str", "nullable": true},
+    "value": {"type": "float", "nullable": true}
+  }
