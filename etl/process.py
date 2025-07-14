@@ -1,4 +1,4 @@
-from utils import table_to_chapter,, check_inputs
+from utils import table_to_chapter, check_inputs
 from etl import transformations as pr
 from etl.input_output import generate_config
 from config.settings import TEMPLATES, ETL_CONFIG, URLS
@@ -23,48 +23,49 @@ def update_tables(
 
     """
 
-    for table in table_list:
+    try:
+        for table in table_list:
 
-        if raw_table_names:
-            # generate keys to fetch config
-            table_key = data_collection + "_" + table.replace(".", "_")
-        else:
-            table_key = table
+            if raw_table_names:
+                # generate keys to fetch config
+                table_key = data_collection + "_" + table.replace(".", "_")
+            else:
+                table_key = table
 
-        try:
-            validation=check_inputs(data_collection=data_collection,
-                                    table_key=table_key,
-                                    etl_config=ETL_CONFIG)
-        except ValueError as E:
-            print(f"Incorrect Imput: {E}")
-            return None
+            check_inputs(data_collection=data_collection,
+                                        table_key=table_key,
+                                        etl_config=ETL_CONFIG)
 
-        chapter_key = table_to_chapter(table_number=table,
-                                       data_collection=data_collection)
 
-        # generate config dictionary
-        config = generate_config(data_collection=data_collection,
-                                 table_key = table_key,
-                                 chapter_key=chapter_key,
-                                 templates=TEMPLATES,
-                                 urls=URLS,
-                                 etl_config=ETL_CONFIG)
+            chapter_key = table_to_chapter(table_number=table,
+                                           data_collection=data_collection)
 
-        # retrieve function callable and args
-        f_name = config["f"]
-        f_args = config["f_args"]
-        f_call = getattr(pr, f_name)
+            # generate config dictionary
+            config = generate_config(data_collection=data_collection,
+                                     table_key = table_key,
+                                     chapter_key=chapter_key,
+                                     templates=TEMPLATES,
+                                     urls=URLS,
+                                     etl_config=ETL_CONFIG)
 
-        # execute
-        res = f_call(**f_args)
+            # retrieve function callable and args
+            f_name = config["f"]
+            f_args = config["f_args"]
+            f_call = getattr(pr, f_name)
 
-        # TODO code that will write tables to DB
-        # Need to wrap this into a separate module
+            # execute
+            res = f_call(**f_args)
 
-        # placeholder for the time being: return results
-        print(res.keys())
+            # TODO code that will write tables to DB
+            # Need to wrap this into a separate module
 
-    return res
+            # placeholder for the time being: return results
+            print(res.keys())
+
+        return res
+    except ValueError as E:
+        print(f"Incorrect Imput: {E}")
+        return None
 
 
 def update_all_tables(data_collection: str):
