@@ -7,9 +7,9 @@ from utils import parse_json
 # ---------------------------------------------
 
 # load .json configuration into dictionaries of variables
-TEMPLATES = parse_json("templates.json")
-URLS = parse_json("urls.json")
-ETL_CONFIG = parse_json("etl_config.lson")
+TEMPLATES = parse_json("config/templates.json")
+URLS = parse_json("config/urls.json")
+ETL_CONFIG = parse_json("config/etl_config.lson")
 
 # data type dict for schema enforcement
 DTYPES = {

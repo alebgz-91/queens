@@ -70,6 +70,10 @@ def process_sheet_to_frame(
                         var_name = var_to_melt,
                         value_name = "Value")
 
+        # set index
+        table.set_index(template.columns + [var_to_melt],
+                        inplace=True)
+
         output_name = data_collection + "_" + sheet.replace(".", "_")
         out.update({output_name: table})
 
@@ -143,6 +147,7 @@ def process_multi_sheets_to_frame(
         a dictionary containing the transformed sheets as a single dataframe
     """
     # read the whole workbook
+    print(url)
     wb = read_and_wrangle_wb(url)
 
     # read the template
@@ -186,14 +191,25 @@ def process_multi_sheets_to_frame(
                        .str.replace(")", "")
                        .str.strip())
 
+    #TODO: this logic should be abstracted into a separate helper function
+
     res["fuel"] = res["fuel"].apply(lambda x: x.split("(")[0].strip())
+
+    # set index
+    res.set_index(template.columns + ["fuel"],
+                  inplace=True)
 
     output_name = data_collection  + "_" + table_name.replace(".", "_")
     return {output_name: res}
 
 
 
-def enforce_schema(data_collection: str, table_key: str, df: pd.DataFrame, schema_dict: dict):
+def enforce_schema(
+        data_collection: str,
+        table_key: str,
+        df: pd.DataFrame,
+        schema_dict: dict
+):
 
     schema = schema_dict[data_collection]
 
@@ -237,11 +253,11 @@ def enforce_schema(data_collection: str, table_key: str, df: pd.DataFrame, schem
             # no action for now, will likely need to handle further types
             pass
 
-            # check nullability
-            n_rows = len(df)
-            n_non_nulls = df[col_name].notnull().sum()
-            if (n_rows > n_non_nulls) and (not exp_null):
-                raise ValueError(f"Column {col_name} is not nullable but NULLs were found.")
+        # check nulls
+        n_rows = len(df)
+        n_non_nulls = df[col_name].notnull().sum()
+        if (n_rows > n_non_nulls) and (not exp_null):
+            raise ValueError(f"Column {col_name} is not nullable but NULLs were found.")
 
     return df.set_index(index_cols)
 
