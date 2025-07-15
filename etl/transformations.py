@@ -71,7 +71,7 @@ def process_sheet_to_frame(
                         value_name = "Value")
 
         # set index
-        table.set_index(template.columns + [var_to_melt],
+        table.set_index(list(template.columns) + [var_to_melt],
                         inplace=True)
 
         output_name = data_collection + "_" + sheet.replace(".", "_")
@@ -196,8 +196,8 @@ def process_multi_sheets_to_frame(
     res["fuel"] = res["fuel"].apply(lambda x: x.split("(")[0].strip())
 
     # set index
-    res.set_index(template.columns + ["fuel"],
-                  inplace=True)
+    res.set_index(list(template.columns) + ["fuel"],
+                 inplace=True)
 
     output_name = data_collection  + "_" + table_name.replace(".", "_")
     return {output_name: res}
@@ -213,8 +213,10 @@ def enforce_schema(
 
     schema = schema_dict[data_collection]
 
-    # keep track of index cols
+    # keep track of index cols before resetting index for the checks
     index_cols = list(df.index.names)
+    df.reset_index(drop=False, inplace=True)
+
 
     # add id cols as a column
     table_name = table_key_to_name(table_key=table_key,
@@ -222,7 +224,7 @@ def enforce_schema(
     df["table_name"] = table_name
     df["data_collection"] = data_collection
 
-    index_cols = index_cols + [data_collection, table_name]
+    index_cols = index_cols + ["data_collection", "table_name"]
 
     # check data types and cast
     for col_name in df:

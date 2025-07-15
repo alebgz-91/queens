@@ -1,7 +1,7 @@
 from utils import table_to_chapter, check_inputs
 from etl import transformations as pr
 from etl.input_output import generate_config
-from config.settings import TEMPLATES, ETL_CONFIG, URLS
+import config.settings as stgs
 
 
 # Initial main script to execute processing for specified tables
@@ -33,20 +33,19 @@ def update_tables(
                 table_key = table
 
             check_inputs(data_collection=data_collection,
-                                        table_key=table_key,
-                                        etl_config=ETL_CONFIG)
-
+                         table_key=table_key,
+                         etl_config=stgs.ETL_CONFIG)
 
             chapter_key = table_to_chapter(table_number=table,
                                            data_collection=data_collection)
 
             # generate config dictionary
             config = generate_config(data_collection=data_collection,
-                                     table_key = table_key,
+                                     table_key=table_key,
                                      chapter_key=chapter_key,
-                                     templates=TEMPLATES,
-                                     urls=URLS,
-                                     etl_config=ETL_CONFIG)
+                                     templates=stgs.TEMPLATES,
+                                     urls=stgs.URLS,
+                                     etl_config=stgs.ETL_CONFIG)
 
             # retrieve function callable and args
             f_name = config["f"]
@@ -56,21 +55,26 @@ def update_tables(
             # execute
             res = f_call(**f_args)
 
-            # TODO code that will write tables to DB
-            # Need to wrap this into a separate module
-
             # placeholder for the time being: return results
-            print(res.keys())
+            print("Enforcing schema...")
+            for table_key in res:
+                df = pr.enforce_schema(data_collection=data_collection,
+                                       table_key=table_key,
+                                       df=res[table_key],
+                                       schema_dict=stgs.SCHEMA)
 
-        return res
+                # TODO code that will write tables to DB
+                # Need to wrap this into a separate module
+
+        return df
+
     except ValueError as E:
-        print(f"Incorrect Imput: {E}")
-        return None
+        print(f"Error: {E}")
 
 
 def update_all_tables(data_collection: str):
     # to get the list of tables look at static config files
-    config = ETL_CONFIG[data_collection]
+    config = stgs.ETL_CONFIG[data_collection]
 
     # go through each chapter and table
     for chapter_key in config.keys():
