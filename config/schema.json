@@ -1,59 +1,64 @@
 {
   "dukes": {
+    "load_timestamp": {
+      "type": "DATETIME",
+      "nullable": false
+    },
+
     "data_collection": {
-      "type": "str",
+      "type": "TEXT",
       "nullable": false
     },
     "table_name": {
-      "type": "str",
+      "type": "TEXT",
       "nullable": false
     },
     "row": {
-      "type": "int",
+      "type": "INTEGER",
       "nullable": false
     },
     "label": {
-      "type": "str",
+      "type": "TEXT",
       "nullable": false
     },
     "year": {
-      "type": "int",
+      "type": "INTEGER",
       "nullable": false
     },
     "group": {
-      "type": "str",
+      "type": "TEXT",
       "nullable": true
     },
     "subgroup": {
-      "type": "str",
+      "type": "TEXT",
       "nullable": true
     },
     "category": {
-      "type": "str",
+      "type": "TEXT",
       "nullable": true
     },
     "item": {
-      "type": "str",
+      "type": "TEXT",
       "nullable": true
     },
     "sector": {
-      "type": "str",
+      "type": "TEXT",
       "nullable": true
     },
     "subsector": {
-      "type": "str",
+      "type": "TEXT",
       "nullable": true
     },
     "fuel": {
-      "type": "str",
+      "type": "TEXT",
       "nullable": true
     },
     "unit": {
-      "type": "str",
+      "type": "TEXT",
       "nullable": true
     },
     "value": {
-      "type": "float",
+      "type": "REAL",
       "nullable": true
     }
   }

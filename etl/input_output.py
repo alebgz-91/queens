@@ -1,7 +1,10 @@
+import sqlite3
+
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 import re
+import sqlite3
 
 
 def read_and_wrangle_wb(
@@ -152,3 +155,64 @@ def generate_config(data_collection: str,
 
     return config
 
+
+def generate_create_table_sql(
+        table_name: str,
+        schema_dict: dict) -> str:
+    """
+    Function that generates a SQL query string for creating a table
+    with prescribed schema and index.
+
+    Args:
+        table_name: name of table to be created
+        schema_dict: a dictionary for table schema of data collections. The first column is assumed to be the index column.
+
+    Returns:
+        the generated query as a string
+
+    """
+    schema_dict = schema_dict[table_name]
+
+    # index column is always the first in schema dict
+    index_col = next(iter(schema_dict))
+
+    columns = []
+    for col, props in schema_dict.items():
+        sql_type = props["type"]
+        nullable = "" if props.get("nullable", True) else "NOT NULL"
+        columns.append(f"{col} {sql_type} {nullable}".strip())
+
+    cols_sql = ",\n    ".join(columns)
+
+    create_table = f"CREATE TABLE IF NOT EXISTS {table_name} (\n    {cols_sql}\n);"
+    create_index = f"CREATE INDEX IF NOT EXISTS idx_{table_name}_{index_col} ON {table_name}({index_col});"
+
+    return create_table + "\n" + create_index
+
+
+def execute_sql(
+        conn_path: str,
+        sql: str,
+        sql_parameters: list = None
+):
+    """
+    Executes a SQL statement with optional parameters.
+
+    Args:
+        conn_path: For SQLite this is simply the path of the .db file
+        sql: query to execute as a string. Must be prepared with placeholders (?) is sql_parameters is not None
+        sql_parameters: optional list of parameters to pass to sql
+
+    Returns:
+        None
+
+    """
+    # get cursor
+    conn = sqlite3.connect(conn_path)
+    cursor = conn.cursor()
+
+    cursor.execute(sql,
+                   sql_parameters)
+
+    conn.commit()
+    conn.close()
