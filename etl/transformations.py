@@ -1,7 +1,7 @@
 from etl.input_output import read_and_wrangle_wb
 from utils import table_key_to_name
 import pandas as pd
-
+from config.settings import DTYPES
 
 def process_sheet_to_frame(
         url: str,
@@ -235,7 +235,7 @@ def enforce_schema(
         exp_dtype = schema[col_name]["type"]
         exp_null = schema[col_name]["nullable"]
 
-        if exp_dtype == "float":
+        if DTYPES[exp_dtype] is float:
             df[col_name] = pd.to_numeric(df[col_name],
                                          errors="coerce")
 
@@ -245,12 +245,14 @@ def enforce_schema(
             non_null_count = df[col_name].notnull().sum()
             if non_null_count == 0:
                 raise ValueError(f"Values cannot be parse to numeric data. Check transformator for table {table_key}.")
-        elif exp_dtype == "int":
+
+        elif DTYPES[exp_dtype] is int:
             df[col_name] = pd.to_numeric(df[col_name],
                                              errors="coerce",
                                              downcast="integer")
-        elif exp_dtype == "str":
+        elif DTYPES[exp_dtype] is str:
             df[col_name] = df[col_name].astype(str)
+
         else:
             # no action for now, will likely need to handle further types
             pass

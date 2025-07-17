@@ -13,9 +13,9 @@ ETL_CONFIG = parse_json("config/etl_config.lson")
 
 # data type dict for schema enforcement
 DTYPES = {
-    "str": str,
-    "int": int,
-    "float": float
+    "TEXT": str,
+    "INTEGER": int,
+    "REAL": float
 }
 
 # schema for DB tables
