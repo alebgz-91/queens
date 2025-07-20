@@ -1,3 +1,5 @@
+import datetime
+
 from etl.input_output import read_and_wrangle_wb
 from utils import table_key_to_name
 import pandas as pd
@@ -9,7 +11,6 @@ def process_sheet_to_frame(
         data_collection: str,
         sheet_names: list,
         var_to_melt: str = "Year",
-        extra_id_vars: list = None,
         map_on_cols: bool = False):
     """
     A chapter-agnostic function that processes individual sheets into separate frames.
@@ -24,16 +25,11 @@ def process_sheet_to_frame(
         url: the full HTML path of the workbook
         data_collection: name of the series the workbook belongs to (i.e. "dukes")        sheet_names: list of sheets to be processed
         var_to_melt: if map_on_cols is False, this is the name of the variable on the columns, otherwise is the name of the index column. Default is "Year"
-        extra_id_vars: additional columns to be used as id_vars. Not usable if map_on_cols is True,
         map_on_cols: whether to transpose the table before mapping to the template. Default is False.
 
     Returns:
 
     """
-
-    # if wishing to use mapping on cols then cannot allow extra id_vars
-    if map_on_cols and (extra_id_vars is not None):
-        raise ValueError("Cannot include extra id vars while transposing: use the mapping template instead.")
 
     out = {}
 
@@ -51,9 +47,8 @@ def process_sheet_to_frame(
                                         sheet_name = sheet)
 
         # first columns is dropped unless otherwise specified
-        if table.columns[0] not in extra_id_vars:
-            table.drop(columns = table.columns[0],
-                       inplace=True)
+        table.drop(columns = table.columns[0],
+                inplace=True)
 
         # get corresponding template
         template = read_and_wrangle_wb(file_path = template_file_path,
@@ -65,10 +60,13 @@ def process_sheet_to_frame(
                          right_on = "row",
                          left_index = True)
 
+        # variable on columns to lowercase
+        var_to_melt = var_to_melt.lower()
+
         table = pd.melt(table,
-                        id_vars = list(template.columns) + extra_id_vars,
+                        id_vars = list(template.columns),
                         var_name = var_to_melt,
-                        value_name = "Value")
+                        value_name = "value")
 
         # set index
         table.set_index(list(template.columns) + [var_to_melt],
@@ -180,6 +178,9 @@ def process_multi_sheets_to_frame(
                       var_name="fuel",
                       value_name="value")
 
+        # add year from sheet name
+        tab["year"] = int(sheet)
+
         # append to master
         res = pd.concat([res, tab], axis=0)
 
@@ -191,12 +192,15 @@ def process_multi_sheets_to_frame(
                        .str.replace(")", "")
                        .str.strip())
 
+        res["fuel"] = res["fuel"].apply(lambda x: x.split("(")[0].strip())
+
     #TODO: this logic should be abstracted into a separate helper function
 
-    res["fuel"] = res["fuel"].apply(lambda x: x.split("(")[0].strip())
+    res["fuel"] = res["fuel"].apply(
+        lambda x: x.split("[")[0].strip())
 
     # set index
-    res.set_index(list(template.columns) + ["fuel"],
+    res.set_index(list(template.columns) + ["fuel", "year"],
                  inplace=True)
 
     output_name = data_collection  + "_" + table_name.replace(".", "_")
@@ -211,10 +215,13 @@ def enforce_schema(
         schema_dict: dict
 ):
 
+    # check for duplicates
+    if df.index.duplicated().sum() > 0:
+        raise ValueError(f"There are duplicates in table {table_key} of data collection {data_collection}. Check mapping table.")
+
     schema = schema_dict[data_collection]
 
-    # keep track of index cols before resetting index for the checks
-    index_cols = list(df.index.names)
+    # Add constant index columns
     df.reset_index(drop=False, inplace=True)
 
 
@@ -223,8 +230,7 @@ def enforce_schema(
                                    data_collection=data_collection)
     df["table_name"] = table_name
     df["data_collection"] = data_collection
-
-    index_cols = index_cols + ["data_collection", "table_name"]
+    df["load_timestamp"] = datetime.datetime.today().isoformat()
 
     # check data types and cast
     for col_name in df:
@@ -263,9 +269,4 @@ def enforce_schema(
         if (n_rows > n_non_nulls) and (not exp_null):
             raise ValueError(f"Column {col_name} is not nullable but NULLs were found.")
 
-    return df.set_index(index_cols)
-
-
-
-
-
+    return df

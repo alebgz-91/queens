@@ -158,6 +158,7 @@ def generate_config(data_collection: str,
 
 def generate_create_table_sql(
         table_name: str,
+        table_env: str,
         schema_dict: dict) -> str:
     """
     Function that generates a SQL query string for creating a table
@@ -165,6 +166,7 @@ def generate_create_table_sql(
 
     Args:
         table_name: name of table to be created
+        table_env: either raw or prod
         schema_dict: a dictionary for table schema of data collections. The first column is assumed to be the index column.
 
     Returns:
@@ -173,6 +175,9 @@ def generate_create_table_sql(
     """
     schema_dict = schema_dict[table_name]
 
+    table_name = table_name + "_" + table_env
+
+
     # index column is always the first in schema dict
     index_col = next(iter(schema_dict))
 
@@ -180,12 +185,12 @@ def generate_create_table_sql(
     for col, props in schema_dict.items():
         sql_type = props["type"]
         nullable = "" if props.get("nullable", True) else "NOT NULL"
-        columns.append(f"{col} {sql_type} {nullable}".strip())
+        columns.append(f"[{col}] {sql_type} {nullable}".strip())
 
     cols_sql = ",\n    ".join(columns)
 
-    create_table = f"CREATE TABLE IF NOT EXISTS {table_name} (\n    {cols_sql}\n);"
-    create_index = f"CREATE INDEX IF NOT EXISTS idx_{table_name}_{index_col} ON {table_name}({index_col});"
+    create_table = f"CREATE TABLE IF NOT EXISTS [{table_name}] (\n    {cols_sql}\n);"
+    create_index = f"CREATE INDEX IF NOT EXISTS idx_{table_name}_{index_col} ON {table_name}([{index_col}]);"
 
     return create_table + "\n" + create_index
 
@@ -208,11 +213,32 @@ def execute_sql(
 
     """
     # get cursor
-    conn = sqlite3.connect(conn_path)
-    cursor = conn.cursor()
+    with sqlite3.connect(conn_path) as conn:
+        cursor = conn.cursor()
 
-    cursor.execute(sql,
-                   sql_parameters)
+        cursor.executescript(sql)
 
-    conn.commit()
-    conn.close()
+    return None
+
+
+def insert_into_sql_table(df: pd.DataFrame,
+                          table_name: str,
+                          db_path: str):
+    """
+    Appends dataframe to existing SQL table
+
+    Args:
+        df: pandas dataframe to insert
+        table_name: name of the destination table
+        db_path: connection string (local path of DB file)
+
+    Returns:
+
+    """
+    with sqlite3.connect(db_path) as conn:
+        df.to_sql(table_name,
+                  conn,
+                  if_exists="append",
+                  index=False)
+
+
