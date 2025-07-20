@@ -1,5 +1,6 @@
 import json
-
+import inspect
+import re
 
 def parse_json(path: str):
     """
@@ -93,3 +94,46 @@ def table_key_to_name(table_key: str, data_collection: str):
                .replace("_", "."))
 
     return tab_name
+
+
+def call_func(
+        func: callable,
+        args_dict: dict):
+    """
+    Call a function on a set of parameters, excluding unnecessary ones.
+
+    Args:
+        func: function callable obkect
+        args_dict: dictionary of arguments
+
+    Returns:
+        the result of func on the subset of the arguments passed
+
+    """
+
+    # get the signature
+    sig = inspect.signature(func)
+    accepted_args = sig.parameters.keys()
+
+    # filter the dict to only include valid arguments
+    filtered_args = {k: v for k, v in args_dict.items() if k in accepted_args}
+
+    return func(**filtered_args)
+
+
+def remove_note_tags(text):
+    """
+    Remove notes indications of the type [note x] or [Note x]
+    Args:
+        text: text to parse
+
+    Returns:
+
+    """
+
+    # Notes are always surrounded by square brackets
+    if not isinstance(text, str):
+        return text
+
+    pattern = r"\[\s*note\s+\d+\s*\]"  # matches [note x] with optional whitespace
+    return re.sub(pattern, "", text, flags=re.IGNORECASE).strip()
