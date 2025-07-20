@@ -1,4 +1,4 @@
-from utils import table_to_chapter, check_inputs
+import utils as u
 import etl.transformations as tr
 import etl.input_output as io
 import config.settings as stgs
@@ -44,11 +44,11 @@ def update_tables(
             else:
                 table_key = table
 
-            check_inputs(data_collection=data_collection,
+            u.check_inputs(data_collection=data_collection,
                          table_key=table_key,
                          etl_config=stgs.ETL_CONFIG)
 
-            chapter_key = table_to_chapter(table_number=table,
+            chapter_key = u.table_to_chapter(table_number=table,
                                            data_collection=data_collection)
 
             # generate config dictionary
@@ -65,7 +65,7 @@ def update_tables(
             f_call = getattr(tr, f_name)
 
             # execute
-            res = f_call(**f_args)
+            res = u.call_func(func=f_call, args_dict=f_args)
 
             # placeholder for the time being: return results
             print("Enforcing schema...")

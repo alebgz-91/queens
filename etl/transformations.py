@@ -1,7 +1,6 @@
 import datetime
-
 from etl.input_output import read_and_wrangle_wb
-from utils import table_key_to_name
+from utils import table_key_to_name, remove_note_tags
 import pandas as pd
 from config.settings import DTYPES
 
@@ -68,6 +67,11 @@ def process_sheet_to_frame(
                         var_name = var_to_melt,
                         value_name = "value")
 
+        # remove notes
+        for c in table.columns:
+            if (c != "label") and (table[c].dtype == "O"):
+                table[c] = table[c].apply(remove_note_tags)
+
         # set index
         table.set_index(list(template.columns) + [var_to_melt],
                         inplace=True)
@@ -102,23 +106,35 @@ def process_dukes_1_1_5(url: str):
     for s in sheets:
         tab = read_and_wrangle_wb(url, sheet_name=s)
 
+        # get row number as a column
+        tab.index.name = "row"
+        tab.reset_index(drop=False, inplace=True)
+
+        # keep original column
+        tab["label"] = tab["Year"].astype(str)
+
         # encode sector from sheet name
         sector = s.split("1.1.5")[1].strip()
 
         # flatten columns
         tab = pd.melt(tab,
-                      id_vars="Year",
+                      id_vars=["Year", "row", "label"],
                       var_name="fuel",
-                      value_name="energy")
+                      value_name="value")
         tab["sector"] = sector
-
-        # clean up fuel names by removing notes
-        tab["fuel"] = tab["fuel"].apply(lambda x: x.split("[note")[0].strip())
 
         # append to master df
         res = pd.concat([res, tab], axis=0)
 
     res["unit"] = "ktoe"
+    res.rename(columns={"Year": "year"}, inplace=True)
+
+    for c in res.columns:
+        if (c != "label") and (res[c].dtype == "O"):
+            res[c] = res[c].apply(remove_note_tags)
+
+    index_cols = ["year", "sector", "fuel"]
+    res.set_index(index_cols, inplace=True)
 
     return {"dukes_1_1_5": res}
 
@@ -194,10 +210,9 @@ def process_multi_sheets_to_frame(
 
         res["fuel"] = res["fuel"].apply(lambda x: x.split("(")[0].strip())
 
-    #TODO: this logic should be abstracted into a separate helper function
-
-    res["fuel"] = res["fuel"].apply(
-        lambda x: x.split("[")[0].strip())
+    for c in res.columns:
+        if (c != "label") and (res[c].dtype == "O"):
+            res[c] = res[c].apply(remove_note_tags)
 
     # set index
     res.set_index(list(template.columns) + ["fuel", "year"],
