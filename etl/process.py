@@ -1,6 +1,6 @@
 from utils import table_to_chapter, check_inputs
-from etl import transformations as pr
-from etl.input_output import generate_config
+import etl.transformations as tr
+import etl.input_output as io
 import config.settings as stgs
 
 
@@ -24,6 +24,18 @@ def update_tables(
     """
 
     try:
+        # create the raw table if does not exist
+        sql_create = io.generate_create_table_sql(
+            table_name=data_collection,
+            table_env="raw",
+            schema_dict=stgs.SCHEMA
+        )
+
+        io.execute_sql(
+            conn_path=stgs.DB_PATH,
+            sql=sql_create
+        )
+
         for table in table_list:
 
             if raw_table_names:
@@ -40,7 +52,7 @@ def update_tables(
                                            data_collection=data_collection)
 
             # generate config dictionary
-            config = generate_config(data_collection=data_collection,
+            config = io.generate_config(data_collection=data_collection,
                                      table_key=table_key,
                                      chapter_key=chapter_key,
                                      templates=stgs.TEMPLATES,
@@ -50,7 +62,7 @@ def update_tables(
             # retrieve function callable and args
             f_name = config["f"]
             f_args = config["f_args"]
-            f_call = getattr(pr, f_name)
+            f_call = getattr(tr, f_name)
 
             # execute
             res = f_call(**f_args)
@@ -58,15 +70,20 @@ def update_tables(
             # placeholder for the time being: return results
             print("Enforcing schema...")
             for table_key in res:
-                df = pr.enforce_schema(data_collection=data_collection,
+                df = tr.enforce_schema(data_collection=data_collection,
                                        table_key=table_key,
                                        df=res[table_key],
                                        schema_dict=stgs.SCHEMA)
 
-                # TODO code that will write tables to DB
-                # Need to wrap this into a separate module
+                # write into raw table
+                to_table = data_collection + "_raw"
+                io.insert_into_sql_table(
+                    df=df,
+                    table_name=to_table,
+                    db_path=stgs.DB_PATH
+                )
 
-        return df
+        return True
 
     except ValueError as E:
         print(f"Error: {E}")
@@ -84,7 +101,7 @@ def update_all_tables(data_collection: str):
         # execute
         table_list = config[chapter_key].keys()
 
-        res = update_tables(data_collection=data_collection,
-                            table_list=table_list,
-                            raw_table_names=False)
+        update_tables(data_collection=data_collection,
+                      table_list=table_list,
+                      raw_table_names=False)
     return True
