@@ -1,7 +1,7 @@
 {
   "dukes": {
-    "load_timestamp": {
-      "type": "DATETIME",
+    "ingest_id": {
+      "type": "INTEGER",
       "nullable": false
     },
 

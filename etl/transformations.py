@@ -223,7 +223,7 @@ def process_multi_sheets_to_frame(
 
 
 
-def enforce_schema(
+def validate_schema(
         data_collection: str,
         table_key: str,
         df: pd.DataFrame,
@@ -245,7 +245,6 @@ def enforce_schema(
                                    data_collection=data_collection)
     df["table_name"] = table_name
     df["data_collection"] = data_collection
-    df["load_timestamp"] = datetime.datetime.today().isoformat()
 
     # check data types and cast
     for col_name in df:
