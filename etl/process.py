@@ -4,6 +4,7 @@ import etl.input_output as io
 import config.settings as stgs
 import sql.sql_utils as sql
 import logging
+import datetime
 
 # enable logging
 
@@ -106,10 +107,10 @@ def update_tables(
 
     except Exception as e:
         logging.error(f"ETL tailed for {data_collection}: \n{e}")
-        return False
+        return None
 
     logging.info(f"Finished ETL update for selected tables in {data_collection}")
-    return True
+    return None
 
 
 def update_all_tables(data_collection: str):
@@ -128,4 +129,41 @@ def update_all_tables(data_collection: str):
                       table_list=table_list,
                       raw_table_names=False)
     logging.info(f"All chapters processed for {data_collection}")
-    return True
+    return None
+
+
+def stage_data(
+        data_collection: str,
+        as_of_date: str = None
+):
+    """
+    Select the most recent version of the data and move to production table.
+    Optionally, the user can select older versions of the data.
+    Args:
+        data_collection: the data collection to stage into production
+        as_of_date: optional cutoff for data versioning. Default is today's date.
+
+    Returns:
+
+    """
+    # check if the data collection exists
+    if data_collection not in stgs.ETL_CONFIG:
+        raise NameError("No such data collection,")
+
+    if as_of_date is not None:
+        as_of_date = datetime.datetime.strptime(as_of_date, "%Y-%m-%d")
+    else:
+        as_of_date = datetime.datetime.now().isoformat()
+
+    try:
+        sql.raw_to_prod(
+            conn_path=stgs.DB_PATH,
+            table_base_name=data_collection,
+            cutoff=as_of_date
+        )
+    except Exception as e:
+        logging.error(f"Staging failed for {data_collection}: \n {e}")
+        return None
+
+    logging.info(f"Data for {data_collection} successfully staged in prod as of {as_of_date}")
+    return None
