@@ -3,9 +3,19 @@ import etl.transformations as tr
 import etl.input_output as io
 import config.settings as stgs
 import sql.sql_utils as sql
+import logging
 
+# enable logging
 
-# Initial main script to execute processing for specified tables
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler("data/logs/etl.log"),
+        logging.StreamHandler()
+    ]
+)
+
 
 def update_tables(
         data_collection: str,
@@ -25,18 +35,19 @@ def update_tables(
     """
 
     try:
-        # create the raw table if does not exist
+        # create the raw table if it does not exist
+        logging.info("Creating table sql tables if not exist")
         sql_create_main_tab = sql.generate_create_table_sql(
             table_name=data_collection,
             table_env="raw",
             schema_dict=stgs.SCHEMA
         )
 
-        sql_creat_log = sql.generate_create_log_sql()
+        sql_create_log = sql.generate_create_log_sql()
 
         sql.execute_sql(
             conn_path=stgs.DB_PATH,
-            sql=sql_creat_log + "\n" + sql_create_main_tab
+            sql=sql_create_log + "\n" + sql_create_main_tab
         )
 
         for table in table_list:
@@ -55,6 +66,7 @@ def update_tables(
                                            data_collection=data_collection)
 
             # generate config dictionary
+            logging.info(f"Getting config for table: {table}")
             config = io.generate_config(data_collection=data_collection,
                                      table_key=table_key,
                                      chapter_key=chapter_key,
@@ -68,11 +80,12 @@ def update_tables(
             f_call = getattr(tr, f_name)
 
             # execute
+            logging.info(f"Calling function {f_name}")
             res = u.call_func(func=f_call, args_dict=f_args)
 
             # placeholder for the time being: return results
-            print("Enforcing schema...")
             for table_key in res:
+                logging.info(f"Validating schema for {table_key}")
                 df = tr.validate_schema(
                     data_collection=data_collection,
                     table_key=table_key,
@@ -80,6 +93,7 @@ def update_tables(
                     schema_dict=stgs.SCHEMA)
 
                 # write into raw table
+                logging.info(f"Ingesting table {table_key}")
                 to_table = data_collection + "_raw"
                 ingest_id = sql.ingest_frame(
                     df=df,
@@ -88,21 +102,24 @@ def update_tables(
                     url=f_args["url"],
                     conn_path=stgs.DB_PATH
                 )
+                logging.info(f"Table {table_key} ingest successful with id {ingest_id}")
 
-        return True
+    except Exception as e:
+        logging.error(f"ETL tailed for {data_collection}: \n{e}")
+        return False
 
-    except ValueError as E:
-        print(f"Error: {E}")
+    logging.info(f"Finished ETL update for selected tables in {data_collection}")
+    return True
 
 
 def update_all_tables(data_collection: str):
     # to get the list of tables look at static config files
+    logging.info(f"Updating all tables for {data_collection}")
     config = stgs.ETL_CONFIG[data_collection]
 
     # go through each chapter and table
     for chapter_key in config.keys():
-        chapter_print_name = chapter_key.replace("_", " ").title()
-        print(f"Updating {chapter_print_name}...")
+        logging.info(f"Updating {chapter_key.replace('_', ' ')}")
 
         # execute
         table_list = config[chapter_key].keys()
@@ -110,4 +127,5 @@ def update_all_tables(data_collection: str):
         update_tables(data_collection=data_collection,
                       table_list=table_list,
                       raw_table_names=False)
+    logging.info(f"All chapters processed for {data_collection}")
     return True
