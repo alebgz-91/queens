@@ -1,0 +1,10 @@
+# Ignore database file
+data/output/data_storage.db
+
+# Ignore everything in output and logs folders
+data/output/*
+data/logs/*
+
+# But keep the .gitkeep files
+!data/output/.gitkeep
+!data/logs/.gitkeep
