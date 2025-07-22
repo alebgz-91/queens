@@ -38,7 +38,6 @@ def generate_create_table_sql(
 
     create_table = f"""
         CREATE TABLE IF NOT EXISTS [{table_name}] (\n    
-        [ingest_id] INTEGER NOT NULL, \n
         {cols_sql}\n);
         """
 
@@ -55,6 +54,7 @@ def generate_create_log_sql():
             success INTEGER
             );
     """
+    return sql
 
 
 def execute_sql(
