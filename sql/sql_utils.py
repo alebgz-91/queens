@@ -1,6 +1,7 @@
 import datetime
 import sqlite3
 import pandas as pd
+from astropy.io.votable.converters import table_column_to_votable_datatype
 
 
 def generate_create_table_sql(
@@ -142,3 +143,48 @@ def ingest_frame(df: pd.DataFrame,
             raise e
 
     return ingest_id
+
+
+def raw_to_prod(
+        conn_path: str,
+        table_base_name: str,
+        cutoff: str = None
+):
+    staging_query = f"""
+
+        CREATE TABLE {table_base_name}_prod AS
+        WITH current_ids AS
+        (
+            SELECT 
+                *
+                ,ROW_NUMBER() OVER (PARTITION BY table_name ORDER BY ingest_ts DESC) as rank
+            FROM 
+                _ingest_log
+            WHERE
+                ingest_ts <= ?
+        )
+
+        SELECT
+            log.ingest_ts
+            ,data.*
+        FROM 
+            {table_base_name}_raw AS data
+        JOIN 
+            current_ids as log
+        ON 
+            data.ingest_id = log.ingest_id;
+
+    """
+
+    with sqlite3.connect(conn_path) as conn:
+
+        cursor = conn.cursor()
+
+        # remove previously live data
+        cursor.execute(f"DROP TABLE IF EXISTS {table_base_name}_prod;")
+
+        # write staging table
+        cursor.execute(staging_query,
+                       (cutoff,))
+
+        return None
