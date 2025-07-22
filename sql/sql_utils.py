@@ -1,0 +1,144 @@
+import datetime
+import sqlite3
+import pandas as pd
+
+
+def generate_create_table_sql(
+        table_name: str,
+        table_env: str,
+        schema_dict: dict) -> str:
+    """
+    Function that generates a SQL query string for creating a table
+    with prescribed schema.
+
+    Args:
+        table_name: name of table to be created
+        table_env: either raw or prod
+        schema_dict: a dictionary for table schema of data collections. The first column is assumed to be the index column.
+
+    Returns:
+        the generated query as a string
+
+    """
+    schema_dict = schema_dict[table_name]
+
+    table_name = table_name + "_" + table_env
+
+
+    # index column is always the first in schema dict
+    index_col = next(iter(schema_dict))
+
+    columns = []
+    for col, props in schema_dict.items():
+        sql_type = props["type"]
+        nullable = "" if props.get("nullable", True) else "NOT NULL"
+        columns.append(f"[{col}] {sql_type} {nullable}".strip())
+
+    cols_sql = ",\n    ".join(columns)
+
+    create_table = f"""
+        CREATE TABLE IF NOT EXISTS [{table_name}] (\n    
+        [ingest_id] INTEGER NOT NULL, \n
+        {cols_sql}\n);
+        """
+
+    return create_table
+
+
+def generate_create_log_sql():
+    sql = """
+        CREATE TABLE IF NOT EXISTS [_ingest_log] (\n
+            ingest_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ingest_ts DATETIME NOT NULL,
+            table_name TEXT NOT NULL,
+            url TEXT,
+            success INTEGER
+            );
+    """
+
+
+def execute_sql(
+        conn_path: str,
+        sql: str
+):
+    """
+    Executes a SQL statement with optional parameters.
+
+    Args:
+        conn_path: For SQLite this is simply the path of the .db file
+        sql: query to execute as a string. Must be prepared with placeholders (?) is sql_parameters is not None
+
+    Returns:
+        None
+
+    """
+    # get cursor
+    with sqlite3.connect(conn_path) as conn:
+        cursor = conn.cursor()
+
+        cursor.executescript(sql)
+
+    return None
+
+
+def ingest_frame(df: pd.DataFrame,
+                 to_table: str,
+                 table_name: str,
+                 url: str,
+                 conn_path: str):
+    """
+    Ingests a pandas dataframe and saves an ingest log entry.
+
+    Args:
+        df: pandas dataframe to insert
+        to_table: name of the destination data table
+        table_name: logical table name (e.g., "dukes_1_1")
+        url: source URL of the data
+        conn_path: path to SQLite DB
+
+    Returns:
+        ingest_id: ID of the ingest log row
+    """
+    import sqlite3
+    import datetime
+
+    with sqlite3.connect(conn_path) as conn:
+        cursor = conn.cursor()
+
+        # Insert a log entry first
+        ingest_ts = datetime.datetime.now().isoformat()
+        cursor.execute(
+            """
+            INSERT INTO _ingest_log 
+                (ingest_ts
+                , table_name
+                , url
+                , success)
+            VALUES (?, ?, ?, 0)
+            """,
+            (ingest_ts, table_name, url)
+        )
+
+        # get lastrowid
+        ingest_id = cursor.lastrowid
+
+        # tag dataframe with ingest_id
+        df["ingest_id"] = ingest_id
+
+        try:
+            df.to_sql(to_table, conn, if_exists="append", index=False)
+
+            # Update success flag in log
+            cursor.execute(
+                """
+                UPDATE _ingest_log
+                SET success = 1
+                WHERE ingest_id = ?
+                """,
+                (ingest_id,)
+            )
+
+        except Exception as e:
+            raise e
+
+    return ingest_id

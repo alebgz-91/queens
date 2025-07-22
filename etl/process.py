@@ -2,6 +2,7 @@ import utils as u
 import etl.transformations as tr
 import etl.input_output as io
 import config.settings as stgs
+import sql.sql_utils as sql
 
 
 # Initial main script to execute processing for specified tables
@@ -25,15 +26,17 @@ def update_tables(
 
     try:
         # create the raw table if does not exist
-        sql_create = io.generate_create_table_sql(
+        sql_create_main_tab = sql.generate_create_table_sql(
             table_name=data_collection,
             table_env="raw",
             schema_dict=stgs.SCHEMA
         )
 
-        io.execute_sql(
+        sql_creat_log = sql.generate_create_log_sql()
+
+        sql.execute_sql(
             conn_path=stgs.DB_PATH,
-            sql=sql_create
+            sql=sql_creat_log + "\n" + sql_create_main_tab
         )
 
         for table in table_list:
@@ -70,17 +73,20 @@ def update_tables(
             # placeholder for the time being: return results
             print("Enforcing schema...")
             for table_key in res:
-                df = tr.enforce_schema(data_collection=data_collection,
-                                       table_key=table_key,
-                                       df=res[table_key],
-                                       schema_dict=stgs.SCHEMA)
+                df = tr.validate_schema(
+                    data_collection=data_collection,
+                    table_key=table_key,
+                    df=res[table_key],
+                    schema_dict=stgs.SCHEMA)
 
                 # write into raw table
                 to_table = data_collection + "_raw"
-                io.insert_into_sql_table(
+                ingest_id = sql.ingest_frame(
                     df=df,
-                    table_name=to_table,
-                    db_path=stgs.DB_PATH
+                    table_name=table_key,
+                    to_table=to_table,
+                    url=f_args["url"],
+                    conn_path=stgs.DB_PATH
                 )
 
         return True
