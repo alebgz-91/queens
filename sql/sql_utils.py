@@ -188,3 +188,34 @@ def raw_to_prod(
                        (cutoff,))
 
         return None
+
+
+def generate_select_sql(
+        from_table: str,
+        cols: list = None,
+        where: str = None,
+        distinct: bool = False
+):
+    select_block = ", ".join(cols) if cols is not None else "*\n"
+    where_clause = f"WHERE {where}" if where is not None else ""
+
+    query = f"""
+        SELECT {"DISTINCT" if distinct else ""} 
+            {select_block}
+        FROM
+            {from_table}
+        {where_clause}
+    """
+
+    return query
+
+
+def read_sql_as_frame(
+        conn_path: str,
+        query: str
+):
+    with sqlite3.connect(conn_path) as conn:
+
+        df = pd.read_sql_query(query, conn)
+
+    return df
