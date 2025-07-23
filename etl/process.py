@@ -5,6 +5,9 @@ import config.settings as stgs
 import sql.sql_utils as sql
 import logging
 import datetime
+import pandas as pd
+from tabulate import tabulate
+
 
 # enable logging
 
@@ -167,3 +170,88 @@ def stage_data(
 
     logging.info(f"Data for {data_collection} successfully staged in prod as of {as_of_date}")
     return None
+
+
+def get_data_info(
+        data_collection: str,
+        table_name: str = None
+) -> pd.DataFrame:
+    """
+    Display basic metadata about the data currently staged in the production table
+    for a given data collection and (optionally) a specific table.
+
+    Args:
+        data_collection (str): The name of the data collection (e.g., "dukes").
+        table_name (str, optional): A specific table to inspect.
+
+    Returns:
+        pd.DataFrame: A summary dataframe of ingested data, or an empty dataframe if none found.
+    """
+    where_clause = f"table_name = '{table_name}'" if table_name else None
+
+    query = sql.generate_select_sql(
+        from_table=f"{data_collection}_prod",
+        where=where_clause,
+        distinct=True
+    )
+
+    df = sql.read_sql_as_frame(conn_path=stgs.DB_PATH, query=query)
+
+    if df.empty:
+        print(f"No data staged for '{data_collection}'"
+              f"{f', table {table_name}' if table_name else ''}.")
+        return pd.DataFrame()
+
+    df["ingest_ts"] = pd.to_datetime(df["ingest_ts"])
+    df["Ingest time"] = df["ingest_ts"].dt.time
+    df["Ingest date"] = df["ingest_ts"].dt.date
+
+    df = df.rename(columns={"table_name": "Table number"})
+    df = df.groupby(["Table number", "Ingest date", "Ingest time"])["year"].agg([
+        ("Min. year", "min"),
+        ("Max. year", "max"),
+        ("Row count", "count")
+    ]).reset_index().set_index("Table number")
+
+    print(f"Found {len(df)} record(s) for '{data_collection}'"
+          f"{f', table {table_name}' if table_name else ''}.\n")
+    print(df)
+
+    return df
+
+
+def get_data_versions(data_collection: str) -> pd.DataFrame:
+    """
+    Show all successful ingestion timestamps for a given data collection.
+
+    Args:
+        data_collection (str): The name of the data collection (e.g., "dukes").
+
+    Returns:
+        pd.DataFrame: A dataframe listing all ingested versions with timestamps.
+    """
+    wildcard = f"{data_collection}%"
+    query = sql.generate_select_sql(
+        from_table="_ingest_log",
+        cols=["table_name", "ingest_ts"],
+        where=f"(table_name LIKE '{wildcard}') AND (success = 1)"
+    )
+
+    df = sql.read_sql_as_frame(conn_path=stgs.DB_PATH, query=query)
+
+    if df.empty:
+        print(f"No ingested versions found for '{data_collection}'.")
+        return pd.DataFrame()
+
+    df = df.rename(columns={
+        "ingest_ts": "Ingest timestamp",
+        "table_name": "Table ID"
+    }).sort_values(
+        by=["Table ID", "Ingest timestamp"],
+        ascending=[True, False]
+    ).set_index("Table ID")
+
+    print(f"Found {len(df)} ingested version(s) for '{data_collection}':\n")
+    print(df)
+
+    return df

@@ -1,16 +1,13 @@
 import typer
-from etl.process import update_tables, update_all_tables, stage_data
+from typing import Optional, List
+from etl.process import *
 
 app = typer.Typer()
 
 @app.command()
 def update(
-    collection: str = typer.Argument(...,
-                                     help="Data collection name (e.g. 'dukes')"),
-    tables: list[str] = typer.Option(None,
-                                     "--table",
-                                     "-t",
-                                     help="Table(s) to update")
+    collection: str,
+    tables: Optional[List[str]] = typer.Option(None, "--table", "-t", help="Table(s) to update")
 ):
     """
     Update specific tables or all tables in a collection.
@@ -27,15 +24,27 @@ def update(
 
 @app.command()
 def stage(
-    collection: typer.Argument(...,
-                               help="Data collection name (e.g. 'dukes')"),
-    as_of_data: typer.Option(None,
-                             "--as_of_date",
-                             "--d",
-                             help="The cutoff point for data versioning.")
+    collection: str,
+    as_of_date: Optional[str] = typer.Option(None, "--as_of_date", "--d", help="The cutoff point for data versioning.")
 ):
+    """
+    Stage the most recent data version for a collection.
+    """
     typer.echo(f"Staging {collection} data...")
-    stage_date(data_collection=collection, as_of_date=as_of_date)
+    stage_data(data_collection=collection, as_of_date=as_of_date)
+
+
+@app.command()
+def info(
+    collection: str,
+    table: Optional[List[str]] = typer.Option(None, "--table", "-t", help="Table(s) to update"),
+):
+    get_data_info(data_collection=collection, table_name=table)
+
+@app.command()
+def versions(collection: str):
+    get_data_versions(data_collection=collection)
+
 
 if __name__ == "__main__":
     app()
