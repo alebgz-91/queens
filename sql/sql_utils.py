@@ -196,6 +196,19 @@ def generate_select_sql(
         where: str = None,
         distinct: bool = False
 ):
+    """
+    Generate a basic SELECT statement with custom WHERE clause. Options available
+    to select distinct values and specify columns to include in the result set.
+    Args:
+        from_table: the source table
+        cols: list of columns to read. Default is "*" (all columns)
+        where: explicit WHERE clause. Supports logical operators in SQL style.
+        distinct: whether to return distinct values only. Default is False.
+
+    Returns:
+        the SQL query as a string
+
+    """
     select_block = ", ".join(cols) if cols is not None else "*\n"
     where_clause = f"WHERE {where}" if where is not None else ""
 
@@ -212,10 +225,25 @@ def generate_select_sql(
 
 def read_sql_as_frame(
         conn_path: str,
-        query: str
+        query: str,
+        query_params: tuple = None
 ):
+    """
+    A wapper of pd.read_sql_query(), reading custom SQL queries from
+    a database located in conn_str. Supports parametrised queries with positional
+    placeholders (?).
+
+    Args:
+        conn_path: connection string (path of db file
+        query: the SQL query as a string
+        query_params: tuple of query parameters.
+
+    Returns:
+        a pandas dataframe
+
+    """
     with sqlite3.connect(conn_path) as conn:
 
-        df = pd.read_sql_query(query, conn)
+        df = pd.read_sql_query(query, conn, params=)
 
     return df
