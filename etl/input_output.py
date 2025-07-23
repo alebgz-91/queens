@@ -1,10 +1,15 @@
 import sqlite3
-
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 import re
-import sqlite3
+import utils as u
+import sql.sql_utils as sql
+import config.settings as stgs
+import os
+import logging
+import datetime
+
 
 
 def read_and_wrangle_wb(
@@ -154,3 +159,111 @@ def generate_config(data_collection: str,
     })
 
     return config
+
+
+def export_table(data_collection: str,
+                 output_path: str,
+                 output_ts: str,
+                 file_type: str,
+                 table_name: str = None,
+                 table_key: str = None):
+    try:
+        if not (table_key or table_name):
+            raise TypeError("Must pass table identified.")
+
+        if table_key is None:
+            table_key = data_collection + "_" + table_name.replace(".", "_")
+
+        if table_name is None:
+            table_name = u.table_key_to_name(table_key=table_key,
+                                             data_collection=data_collection)
+
+        # read data from sql
+        query = f"""
+            SELECT *
+            FROM 
+                {data_collection}_prod
+            WHERE 
+                data_collection = ?
+                AND table_name = ?
+        """
+        df = sql.read_sql_as_frame(conn_path=stgs.DB_PATH,
+                                   query=query,
+                                   query_params=(data_collection, table_name))
+
+        file_name = table_key + "_" + output_ts + f".{file_type}"
+        output_path = os.path.join(output_path, file_name)
+
+        logging.info(f"Saving {table_key} to {file_type}")
+        if file_type == "csv":
+            df.to_csv(output_path)
+        elif file_type == "parquet":
+            df.to_parquet(output_path)
+        elif file_type == "xlsx":
+            df.to_excel(output_path, sheet_name=table_name)
+        else:
+            raise TypeError(f"Exporting unsupported to file type {file_type}.")
+
+    except Exception as e:
+        logging.error(f"Export failed for {table_key}: \n{e}")
+
+    logging.info(f"Successfully created {output_path + file_name}")
+
+
+def export_all(data_collection: str,
+               output_path: str,
+               file_type: str,
+               bulk_export: bool = False):
+    output_ts = datetime.datetime.now().isoformat()
+
+    try:
+        if not bulk_export:
+            chapter_list = stgs.ETL_CONFIG[data_collection].keys()
+
+            for chapter in chapter_list:
+                logging.info(f"Saving tables from {data_collection}, {chapter}")
+                table_list = stgs.ETL_CONFIG[data_collection][chapter].keys()
+
+                for table_key in table_list:
+                    export_table(data_collection=data_collection,
+                                 output_path=output_path,
+                                 output_ts=output_ts,
+                                 file_type=file_type,
+                                 table_key=table_key)
+
+                logging.info(f"Finished exporting [chapter]")
+
+            logging.info(f"All tables from {data_collection} exported succesfully to {file_type}")
+
+        else:
+            # export all tables in the data collection to a single file
+            logging.info(f"Reading the {data_collection} production table.")
+            df = sql.read_sql_as_frame(conn_path=stgs.DB_PATH,
+                                       query=f"SELECT * FROM {data_collection}_prod")
+            file_name = f"{data_collection}_{output_ts}.{file_type}"
+            output_path = os.path.join(output_path, file_name)
+
+            logging.info(f"Saving {data_collection} to {file_type}.")
+
+            if file_type == "csv":
+                df.to_csv(output_path)
+            elif file_type == "parquet":
+                df.to_parquet(output_path)
+            elif file_type == "xlsx":
+                # save one table per sheet in a single workbook
+                logging.info(f"Creating workbook {output_path + file_name}.")
+                with pd.ExcelWriter(output_path) as wr:
+
+                    for table_name in df["table_name"].unique():
+                        df[df.table_name == table_name].to_excel(wr, sheet_name=table_name)
+
+
+            else:
+                raise TypeError(f"Exporting unsupported to file type {file_type}.")
+
+            logging.info(f"Successfully saved {output_path + file_name}")
+
+    except Exception as e:
+        logging.error(f"Export failed for {table_key}: \n{e}")
+
+
