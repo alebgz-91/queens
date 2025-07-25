@@ -1,11 +1,12 @@
 import datetime
+import logging
 import sqlite3
 import pandas as pd
 from astropy.io.votable.converters import table_column_to_votable_datatype
 
 
 def generate_create_table_sql(
-        table_name: str,
+        table_prefix: str,
         table_env: str,
         schema_dict: dict) -> str:
     """
@@ -13,7 +14,7 @@ def generate_create_table_sql(
     with prescribed schema.
 
     Args:
-        table_name: name of table to be created
+        table_prefix: the table identifier, normally the data_collection
         table_env: either raw or prod
         schema_dict: a dictionary for table schema of data collections. The first column is assumed to be the index column.
 
@@ -21,15 +22,12 @@ def generate_create_table_sql(
         the generated query as a string
 
     """
-    schema_dict = schema_dict[table_name]
+    schema_dict = schema_dict[table_prefix]
 
-    table_name = table_name + "_" + table_env
-
-
-    # index column is always the first in schema dict
-    index_col = next(iter(schema_dict))
+    destination_table = f"{table_prefix}_{table_env}"
 
     columns = []
+
     for col, props in schema_dict.items():
         sql_type = props["type"]
         nullable = "" if props.get("nullable", True) else "NOT NULL"
@@ -38,7 +36,7 @@ def generate_create_table_sql(
     cols_sql = ",\n    ".join(columns)
 
     create_table = f"""
-        CREATE TABLE IF NOT EXISTS [{table_name}] (\n    
+        CREATE TABLE IF NOT EXISTS [{destination_table}] (\n    
         {cols_sql}\n);
         """
 
@@ -50,6 +48,7 @@ def generate_create_log_sql():
         CREATE TABLE IF NOT EXISTS [_ingest_log] (\n
             ingest_id INTEGER PRIMARY KEY AUTOINCREMENT,
             ingest_ts DATETIME NOT NULL,
+            data_collection TEXT NOT NULL,
             table_name TEXT NOT NULL,
             url TEXT,
             success INTEGER
@@ -82,11 +81,13 @@ def execute_sql(
     return None
 
 
-def ingest_frame(df: pd.DataFrame,
-                 to_table: str,
-                 table_name: str,
-                 url: str,
-                 conn_path: str):
+def ingest_frame(
+        df: pd.DataFrame,
+        to_table: str,
+        table_name: str,
+        data_collection: str,
+        url: str,
+        conn_path: str):
     """
     Ingests a pandas dataframe and saves an ingest log entry.
 
@@ -94,14 +95,16 @@ def ingest_frame(df: pd.DataFrame,
         df: pandas dataframe to insert
         to_table: name of the destination data table
         table_name: logical table name (e.g., "dukes_1_1")
+        data_collection: name of data collection
         url: source URL of the data
         conn_path: path to SQLite DB
 
     Returns:
         ingest_id: ID of the ingest log row
     """
-    import sqlite3
-    import datetime
+    # validate to_table and data_collection
+    if data_collection not in to_table:
+        logging.warning(f"Writing to table {to_table} but data collection is {data_collection}")
 
     with sqlite3.connect(conn_path) as conn:
         cursor = conn.cursor()
@@ -112,12 +115,13 @@ def ingest_frame(df: pd.DataFrame,
             """
             INSERT INTO _ingest_log 
                 (ingest_ts
+                , data_collection
                 , table_name
                 , url
                 , success)
-            VALUES (?, ?, ?, 0)
+            VALUES (?, ?, ?, ?, 0)
             """,
-            (ingest_ts, table_name, url)
+            (ingest_ts, data_collection, table_name, url)
         )
 
         # get lastrowid
@@ -244,6 +248,7 @@ def read_sql_as_frame(
     """
     with sqlite3.connect(conn_path) as conn:
 
-        df = pd.read_sql_query(query, conn, params=)
+        df = pd.read_sql_query(query, conn,
+                               params=query_params)
 
     return df

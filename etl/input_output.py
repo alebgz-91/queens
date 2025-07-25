@@ -3,7 +3,6 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 import re
-import utils as u
 import sql.sql_utils as sql
 import config.settings as stgs
 import os
@@ -113,7 +112,7 @@ def get_dukes_urls(url):
             if match:
                 table_number = match.group(1).replace(".", "_")
                 suffix = match.group(4).lower()
-                key = f"dukes_{table_number}{suffix}"
+                key = f"{table_number}{suffix}"
                 name = link.text.strip()
                 full_url = href if href.startswith("http") else f"https://www.gov.uk{href}"
                 dukes_tables[key] = {"name": name, "url": full_url}
@@ -122,7 +121,7 @@ def get_dukes_urls(url):
 
 
 def generate_config(data_collection: str,
-                    table_key: str,
+                    table_name: str,
                     chapter_key: str,
                     templates: dict,
                     urls: dict,
@@ -132,7 +131,7 @@ def generate_config(data_collection: str,
     This requires environment variables to be set correctly in the config/ directory.
     Args:
         data_collection: the collection the table belongs to
-        table_key: table key in the form data_collection + "_" + table number
+        table_name: table number
         chapter_key: chapter of the table in the form "chapter_x"
         templates: dictionary of templates by data_collection. Should be set in config/.
         urls: dictionary of URLs for individual chapter by data_collections. Should be set in config/.
@@ -142,11 +141,11 @@ def generate_config(data_collection: str,
 
     """
     # get static config dict
-    config = etl_config[data_collection][chapter_key][table_key]
+    config = etl_config[data_collection][chapter_key][table_name]
 
     # determine table url
     chapter_page_url = urls[data_collection][chapter_key]
-    url = get_dukes_urls(url=chapter_page_url)[table_key]["url"]
+    url = get_dukes_urls(url=chapter_page_url)[table_name]["url"]
 
     # determine the template file path
     template_file_path = templates[data_collection][chapter_key]
@@ -161,22 +160,30 @@ def generate_config(data_collection: str,
     return config
 
 
-def export_table(data_collection: str,
-                 output_path: str,
-                 output_ts: str,
-                 file_type: str,
-                 table_name: str = None,
-                 table_key: str = None):
+def export_table(
+        data_collection: str,
+        output_ts: str,
+        file_type: str,
+        table_name: str,
+        output_path: str = stgs.EXPORT_PATH
+
+):
+    """
+    Utility that can export a specific table_name within a data_collection to
+    flat files. Suports csv, parquet and Excel (xlsx)
+    Args:
+        data_collection: the data collection name
+        output_path:
+        output_ts: destination folder of the files. Default is data/outputs/exported/
+        file_type: either 'csv', 'parquet' or 'xlsx'
+        table_name: the name of the table to export (i.e. 1.2)
+
+    Returns:
+        None
+
+    """
     try:
-        if not (table_key or table_name):
-            raise TypeError("Must pass table identified.")
 
-        if table_key is None:
-            table_key = data_collection + "_" + table_name.replace(".", "_")
-
-        if table_name is None:
-            table_name = u.table_key_to_name(table_key=table_key,
-                                             data_collection=data_collection)
 
         # read data from sql
         query = f"""
@@ -191,10 +198,14 @@ def export_table(data_collection: str,
                                    query=query,
                                    query_params=(data_collection, table_name))
 
-        file_name = table_key + "_" + output_ts + f".{file_type}"
+        file_name = (data_collection
+                     + table_name.replace(".","_")
+                     + "_"
+                     + output_ts
+                     + f".{file_type}")
         output_path = os.path.join(output_path, file_name)
 
-        logging.info(f"Saving {table_key} to {file_type}")
+        logging.info(f"Saving {data_collection} {table_name} to {file_type}")
         if file_type == "csv":
             df.to_csv(output_path)
         elif file_type == "parquet":
@@ -205,15 +216,31 @@ def export_table(data_collection: str,
             raise TypeError(f"Exporting unsupported to file type {file_type}.")
 
     except Exception as e:
-        logging.error(f"Export failed for {table_key}: \n{e}")
+        logging.error(f"Export failed for {data_collection} {table_name}: \n{e}")
 
     logging.info(f"Successfully created {output_path + file_name}")
 
 
-def export_all(data_collection: str,
-               output_path: str,
-               file_type: str,
-               bulk_export: bool = False):
+def export_all(
+        data_collection: str,
+
+        file_type: str,
+        bulk_export: bool = False
+):
+    """
+    Export all table sin a given data_collection to flat files. Supports csv, parquet and Excel file types.
+    Tables can either be saved as individual files (bulk = False, the detault) or
+    as a sigle file (bulk = True). For bulk export to Excel, the individual tables are
+    written to separate sheets of the same workbook.
+    Args:
+        data_collection: Name of the data collection
+        file_type: Either 'csv', 'parquet' of 'xlsx'
+        bulk_export: if True, exports all tables into a single file. Default is False
+
+    Returns:
+
+    """
+    output_path: str = stgs.EXPORT_PATH,
     output_ts = datetime.datetime.now().isoformat()
 
     try:
@@ -225,11 +252,12 @@ def export_all(data_collection: str,
                 table_list = stgs.ETL_CONFIG[data_collection][chapter].keys()
 
                 for table_key in table_list:
-                    export_table(data_collection=data_collection,
-                                 output_path=output_path,
-                                 output_ts=output_ts,
-                                 file_type=file_type,
-                                 table_key=table_key)
+                    export_table(
+                        data_collection=data_collection,
+                        output_path=output_path,
+                        output_ts=output_ts,
+                        file_type=file_type,
+                             table_name=table_key)
 
                 logging.info(f"Finished exporting [chapter]")
 
@@ -264,6 +292,6 @@ def export_all(data_collection: str,
             logging.info(f"Successfully saved {output_path + file_name}")
 
     except Exception as e:
-        logging.error(f"Export failed for {table_key}: \n{e}")
+        logging.error(f"Export failed for {table_name}: \n{e}")
 
 

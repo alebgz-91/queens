@@ -55,15 +55,18 @@ def table_to_chapter(table_number, data_collection):
 
 
 
-def check_inputs (data_collection,table_key,etl_config):
+def check_inputs (data_collection: str,
+                  table_name: str,
+                  etl_config: dict):
     """
     Function that checks if a table is found in the ETL_CONFIG file
     Args:
         data_collection: Name of the data_collection
-        table_key: Name of the table
+        table_name: Name of the table
         etl_config: dictionary of ETL configuration
 
-    Returns: True if data_collection and table_key are found
+    Returns:
+        True if data_collection and table_name are found
     Raises:
         ValueError if either data_collection or table_key are not found
 
@@ -72,28 +75,9 @@ def check_inputs (data_collection,table_key,etl_config):
         raise ValueError(f"{data_collection} data not found")
     else:
         for chapter_key in etl_config[data_collection]:
-                if table_key not in etl_config[data_collection][chapter_key]:
-                    raise ValueError(f"{table_key} value not found in {data_collection}")
+                if table_name not in etl_config[data_collection][chapter_key]:
+                    raise ValueError(f"Table {table_name} value not found in {data_collection}")
     return True
-
-
-def table_key_to_name(table_key: str, data_collection: str):
-    """
-    Transforms a table_key into a human-readable table name. For example, from dukes_1_2_3 to 1.2.3
-    Args:
-        table_key: original table key
-        data_collection: data collection name
-
-    Returns:
-        the table name as a string
-
-    """
-
-    tab_name = (table_key
-               .replace(data_collection, "")[1:]
-               .replace("_", "."))
-
-    return tab_name
 
 
 def call_func(
@@ -103,7 +87,7 @@ def call_func(
     Call a function on a set of parameters, excluding unnecessary ones.
 
     Args:
-        func: function callable obkect
+        func: function callable object
         args_dict: dictionary of arguments
 
     Returns:
