@@ -156,7 +156,7 @@ def stage_data(
     try:
         sql.raw_to_prod(
             conn_path=stgs.DB_PATH,
-            table_base_name=data_collection,
+            table_prefix=data_collection,
             cutoff=as_of_date
         )
     except Exception as e:

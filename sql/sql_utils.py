@@ -151,12 +151,12 @@ def ingest_frame(
 
 def raw_to_prod(
         conn_path: str,
-        table_base_name: str,
-        cutoff: str = None
+        table_prefix: str,
+        cutoff: str
 ):
     staging_query = f"""
 
-        CREATE TABLE {table_base_name}_prod AS
+        CREATE TABLE {table_prefix}_prod AS
         WITH current_ids AS
         (
             SELECT 
@@ -166,13 +166,15 @@ def raw_to_prod(
                 _ingest_log
             WHERE
                 ingest_ts <= ?
+                AND data_collection = ?
         )
 
         SELECT
-            log.ingest_ts
+            log.ingest_id
+            ,log.ingest_ts
             ,data.*
         FROM 
-            {table_base_name}_raw AS data
+            {table_prefix}_raw AS data
         JOIN 
             current_ids as log
         ON 
@@ -185,11 +187,11 @@ def raw_to_prod(
         cursor = conn.cursor()
 
         # remove previously live data
-        cursor.execute(f"DROP TABLE IF EXISTS {table_base_name}_prod;")
+        cursor.execute(f"DROP TABLE IF EXISTS {table_prefix}_prod;")
 
         # write staging table
         cursor.execute(staging_query,
-                       (cutoff,))
+                       (cutoff,table_prefix))
 
         return None
 
