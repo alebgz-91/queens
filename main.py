@@ -1,6 +1,11 @@
 import typer
 from typing import Optional, List
+
+from param import output
+
 from etl.process import *
+from etl.input_output import export_all, export_table
+from config.settings import EXPORT_PATH
 
 app = typer.Typer()
 
@@ -37,13 +42,46 @@ def stage(
 @app.command()
 def info(
     collection: str,
-    table: Optional[List[str]] = typer.Option(None, "--table", "-t", help="Table(s) to update"),
+    table: Optional[str] = typer.Option(None, "--table", "-t", help="Optional table name to inspect")
 ):
-    get_data_info(data_collection=collection, table_name=table)
+    get_data_info(data_collection=collection,
+                  table_name=str(table))
 
 @app.command()
-def versions(collection: str):
-    get_data_versions(data_collection=collection)
+def versions(
+        collection: str,
+        table: Optional[str] = typer.Option(None, "--table", "-t", help="Optional table name to inspect")
+):
+    get_data_versions(data_collection=collection, table_name=table)
+
+
+@app.command()
+def export(
+        collection: str,
+        format: Optional[str] = typer.Option(None, "--table", "-t", help="Format to use for export. Options are csv, parquet or xlsx, default is xsc"),
+        table: Optional[str] = typer.Option(None, "--table", "-t", help="Optional table name to download"),
+        path: Optional[str] = typer.Option(EXPORT_PATH, "--path", "-p", help="Optional destination path"),
+        bulk: Optional[bool] = typer.Option(False, "--bulk", "-b", help="Whether to save all the data in a single file or not")
+):
+    if table:
+        typer.echo(f"Exporting {collection} table {table}...")
+        export_table(
+            data_collection=collection,
+            file_type=format,
+            output_path=path,
+            table_name=table
+        )
+    else:
+        bulk_str = " as a single file" if bulk else ""
+        typer.echo(f"Exporting all tables in {collection}{bulk_str}---")
+        export_all(
+            data_collection=collection,
+            file_type=format,
+            output_path=path,
+            bulk_export=bulk
+        )
+
+
 
 
 if __name__ == "__main__":

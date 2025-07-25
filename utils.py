@@ -56,13 +56,13 @@ def table_to_chapter(table_number, data_collection):
 
 
 def check_inputs (data_collection: str,
-                  table_name: str,
-                  etl_config: dict):
+                  etl_config: dict,
+                  table_name: str = None):
     """
     Function that checks if a table is found in the ETL_CONFIG file
     Args:
         data_collection: Name of the data_collection
-        table_name: Name of the table
+        table_name: Name of the table. If None, function checks existence of data_collection only
         etl_config: dictionary of ETL configuration
 
     Returns:
@@ -73,7 +73,7 @@ def check_inputs (data_collection: str,
     """
     if data_collection not in etl_config:
         raise ValueError(f"{data_collection} data not found")
-    else:
+    elif table_name is not None:
         for chapter_key in etl_config[data_collection]:
                 if table_name not in etl_config[data_collection][chapter_key]:
                     raise ValueError(f"Table {table_name} value not found in {data_collection}")

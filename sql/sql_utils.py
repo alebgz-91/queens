@@ -87,7 +87,9 @@ def ingest_frame(
         table_name: str,
         data_collection: str,
         url: str,
-        conn_path: str):
+        conn_path: str,
+        ingest_ts: str
+):
     """
     Ingests a pandas dataframe and saves an ingest log entry.
 
@@ -98,6 +100,7 @@ def ingest_frame(
         data_collection: name of data collection
         url: source URL of the data
         conn_path: path to SQLite DB
+        ingest_ts: timestamp string to save into the ingest log table
 
     Returns:
         ingest_id: ID of the ingest log row
@@ -110,7 +113,6 @@ def ingest_frame(
         cursor = conn.cursor()
 
         # Insert a log entry first
-        ingest_ts = datetime.datetime.now().isoformat()
         cursor.execute(
             """
             INSERT INTO _ingest_log 
@@ -216,14 +218,15 @@ def generate_select_sql(
 
     """
     select_block = ", ".join(cols) if cols is not None else "*\n"
-    where_clause = f"WHERE {where}" if where is not None else ""
+    where_clause = f"WHERE \n\t{where}" if where is not None else ""
+    distinct_clause = "DISTINCT" if distinct else ""
 
     query = f"""
-        SELECT {"DISTINCT" if distinct else ""} 
+        SELECT {distinct_clause} 
             {select_block}
         FROM
             {from_table}
-        {where_clause}
+        {where_clause};
     """
 
     return query

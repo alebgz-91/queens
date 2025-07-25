@@ -162,10 +162,10 @@ def generate_config(data_collection: str,
 
 def export_table(
         data_collection: str,
-        output_ts: str,
         file_type: str,
         table_name: str,
-        output_path: str = stgs.EXPORT_PATH
+        output_path: str,
+output_ts: str = None
 
 ):
     """
@@ -184,6 +184,9 @@ def export_table(
     """
     try:
 
+        if output_ts is None:
+            output_ts = str(datetime.date.today())
+
 
         # read data from sql
         query = f"""
@@ -191,12 +194,11 @@ def export_table(
             FROM 
                 {data_collection}_prod
             WHERE 
-                data_collection = ?
-                AND table_name = ?
+                table_name = ?
         """
         df = sql.read_sql_as_frame(conn_path=stgs.DB_PATH,
                                    query=query,
-                                   query_params=(data_collection, table_name))
+                                   query_params=(table_name,))
 
         file_name = (data_collection
                      + table_name.replace(".","_")
@@ -223,9 +225,9 @@ def export_table(
 
 def export_all(
         data_collection: str,
-
         file_type: str,
-        bulk_export: bool = False
+        output_path: str,
+        bulk_export: bool
 ):
     """
     Export all table sin a given data_collection to flat files. Supports csv, parquet and Excel file types.
@@ -240,8 +242,8 @@ def export_all(
     Returns:
 
     """
-    output_path: str = stgs.EXPORT_PATH,
-    output_ts = datetime.datetime.now().isoformat()
+
+    output_ts = str(datetime.date.today())
 
     try:
         if not bulk_export:
