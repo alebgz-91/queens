@@ -1,3 +1,6 @@
+from conda_build.inspect_pkg import check_install
+from fontTools.ttLib.tables.M_A_T_H_ import table_M_A_T_H_
+
 import utils as u
 import etl.transformations as tr
 import etl.input_output as io
@@ -23,7 +26,8 @@ logging.basicConfig(
 
 def update_tables(
         data_collection: str,
-        table_list: list
+        table_list: list,
+        ingest_ts: str = None
 ):
     """
     Update a selection of tables, fetching new data from source URLs.
@@ -31,11 +35,15 @@ def update_tables(
     Args:
         data_collection: name of the release the tables belong to. Myst be lowercase
         table_list: a list or iterable of tables to be parsed and updated
+        ingest_ts: timestamp string for ingest. If not passed by batch process it will set to today
 
     Returns:
         None
 
     """
+
+    if ingest_ts is None:
+        ingest_ts = datetime.datetime.now().isoformat()
 
     try:
         # create the raw table if it does not exist
@@ -100,7 +108,8 @@ def update_tables(
                     to_table=to_table,
                     data_collection=data_collection,
                     url=f_args["url"],
-                    conn_path=stgs.DB_PATH
+                    conn_path=stgs.DB_PATH,
+                    ingest_ts=ingest_ts
                 )
                 logging.info(f"Table {table_sheet} ingest successful with id {ingest_id}")
 
@@ -113,19 +122,33 @@ def update_tables(
 
 
 def update_all_tables(data_collection: str):
-    # to get the list of tables look at static config files
-    logging.info(f"Updating all tables for {data_collection}")
-    config = stgs.ETL_CONFIG[data_collection]
 
-    # go through each chapter and table
-    for chapter_key in config.keys():
-        logging.info(f"Updating {chapter_key.replace('_', ' ')}")
+    try:
+        # verify that the data collection exists
+        u.check_inputs(data_collection,
+                       etl_config=stgs.ETL_CONFIG)
+        # time snapshot
+        ingest_ts = datetime.datetime.now().isoformat()
 
-        # execute
-        table_list = config[chapter_key].keys()
+        # to get the list of tables look at static config files
+        logging.info(f"Updating all tables for {data_collection}")
+        config = stgs.ETL_CONFIG[data_collection]
 
-        update_tables(data_collection=data_collection,
-                      table_list=table_list)
+        # go through each chapter and table
+        for chapter_key in config.keys():
+            logging.info(f"Updating {chapter_key.replace('_', ' ')}")
+
+            # execute
+            table_list = config[chapter_key].keys()
+
+            update_tables(data_collection=data_collection,
+                          table_list=table_list,
+                          ingest_ts=ingest_ts)
+
+    except Exception as e:
+        logging.error(f"Batch update failed for {data_collection}: \n{e}")
+        return None
+
     logging.info(f"All chapters processed for {data_collection}")
     return None
 
@@ -182,7 +205,12 @@ def get_data_info(
     Returns:
         pd.DataFrame: A summary dataframe of ingested data, or an empty dataframe if none found.
     """
-    where_clause = f"table_name = '{table_name}'" if table_name else None
+    if table_name is not None:
+        where_clause = f"table_name = ?"
+        query_params = (table_name,)
+    else:
+        where_clause = None
+        query_params = None
 
     query = sql.generate_select_sql(
         from_table=f"{data_collection}_prod",
@@ -190,7 +218,11 @@ def get_data_info(
         distinct=True
     )
 
-    df = sql.read_sql_as_frame(conn_path=stgs.DB_PATH, query=query)
+    df = sql.read_sql_as_frame(
+        conn_path=stgs.DB_PATH,
+        query=query,
+        query_params=query_params
+    )
 
     if df.empty:
         print(f"No data staged for '{data_collection}'"
@@ -210,7 +242,7 @@ def get_data_info(
 
     print(f"Found {len(df)} record(s) for '{data_collection}'"
           f"{f', table {table_name}' if table_name else ''}.\n")
-    print(df)
+    print(tabulate(df, headers="keys"))
 
     return df
 
