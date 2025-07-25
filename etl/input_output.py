@@ -110,7 +110,7 @@ def get_dukes_urls(url):
                               link.text,
                               re.IGNORECASE)
             if match:
-                table_number = match.group(1).replace(".", "_")
+                table_number = match.group(1)
                 suffix = match.group(4).lower()
                 key = f"{table_number}{suffix}"
                 name = link.text.strip()
