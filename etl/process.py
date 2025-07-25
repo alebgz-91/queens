@@ -215,38 +215,64 @@ def get_data_info(
     return df
 
 
-def get_data_versions(data_collection: str) -> pd.DataFrame:
+def get_data_versions(
+        data_collection: str,
+        table_name: str = None
+):
     """
     Show all successful ingestion timestamps for a given data collection.
 
     Args:
         data_collection (str): The name of the data collection (e.g., "dukes").
+        table_name (str): Optional name of table to inspect. Default shows data_collection level versions only
 
     Returns:
         pd.DataFrame: A dataframe listing all ingested versions with timestamps.
     """
-    wildcard = f"{data_collection}%"
+
+    if table_name is None:
+        where_clause = "data_collection = ? AND success = 1"
+        query_params = (data_collection, )
+        print_str = data_collection
+    else:
+        where_clause = "data_collection = ? AND table_name = ? AND success = 1"
+        query_params = (data_collection, table_name)
+        print_str = f"{data_collection} table {table_name}"
+
+    select_block = ["table_name", "ingest_ts"]
+
     query = sql.generate_select_sql(
         from_table="_ingest_log",
-        cols=["table_name", "ingest_ts"],
-        where=f"(table_name LIKE '{wildcard}') AND (success = 1)"
+        cols=select_block,
+        where=where_clause,
+        distinct=True
     )
 
-    df = sql.read_sql_as_frame(conn_path=stgs.DB_PATH, query=query)
+    df = sql.read_sql_as_frame(conn_path=stgs.DB_PATH,
+                               query=query,
+                               query_params=query_params)
 
     if df.empty:
-        print(f"No ingested versions found for '{data_collection}'.")
+        print(f"No ingested versions found for {print_str}.")
         return pd.DataFrame()
 
-    df = df.rename(columns={
-        "ingest_ts": "Ingest timestamp",
-        "table_name": "Table ID"
+    # reshape dataframe into human readable form
+    df = df.rename(
+        columns={
+            "table_name": "Table number",
+            "data_collection": "Data collection"
     }).sort_values(
-        by=["Table ID", "Ingest timestamp"],
+        by=["Table number", "ingest_ts"],
         ascending=[True, False]
-    ).set_index("Table ID")
+    ).set_index(
+        "Table number"
+    )
+    df["ingest_ts"] = pd.to_datetime(df["ingest_ts"])
+    df["Ingest date"] = df["ingest_ts"].dt.date
+    df["Ingest time"] = df["ingest_ts"].dt.time
+    df.drop(columns=["ingest_ts"], inplace=True)
 
-    print(f"Found {len(df)} ingested version(s) for '{data_collection}':\n")
-    print(df)
+    print(f"Found {len(df)} ingested version(s) for {print_str}:\n")
+    print(tabulate(df, headers="keys"))
 
     return df
