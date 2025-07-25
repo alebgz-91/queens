@@ -5,10 +5,6 @@
       "nullable": false
     },
 
-    "data_collection": {
-      "type": "TEXT",
-      "nullable": false
-    },
     "table_name": {
       "type": "TEXT",
       "nullable": false

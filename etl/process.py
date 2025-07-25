@@ -23,18 +23,17 @@ logging.basicConfig(
 
 def update_tables(
         data_collection: str,
-        table_list: list,
-        raw_table_names=True):
+        table_list: list
+):
     """
     Update a selection of tables, fetching new data from source URLs.
 
     Args:
         data_collection: name of the release the tables belong to. Myst be lowercase
         table_list: a list or iterable of tables to be parsed and updated
-        raw_table_names: if False, table_list contains table_keys rather than table numbers, for example "dukes_1_2_3
- instead of "1.2.3"
+
     Returns:
-        True if the processing is successful
+        None
 
     """
 
@@ -42,7 +41,7 @@ def update_tables(
         # create the raw table if it does not exist
         logging.info("Creating table sql tables if not exist")
         sql_create_main_tab = sql.generate_create_table_sql(
-            table_name=data_collection,
+            table_prefix=data_collection,
             table_env="raw",
             schema_dict=stgs.SCHEMA
         )
@@ -56,14 +55,8 @@ def update_tables(
 
         for table in table_list:
 
-            if raw_table_names:
-                # generate keys to fetch config
-                table_key = data_collection + "_" + table.replace(".", "_")
-            else:
-                table_key = table
-
             u.check_inputs(data_collection=data_collection,
-                         table_key=table_key,
+                         table_name=table,
                          etl_config=stgs.ETL_CONFIG)
 
             chapter_key = u.table_to_chapter(table_number=table,
@@ -71,12 +64,14 @@ def update_tables(
 
             # generate config dictionary
             logging.info(f"Getting config for table: {table}")
-            config = io.generate_config(data_collection=data_collection,
-                                     table_key=table_key,
-                                     chapter_key=chapter_key,
-                                     templates=stgs.TEMPLATES,
-                                     urls=stgs.URLS,
-                                     etl_config=stgs.ETL_CONFIG)
+            config = io.generate_config(
+                data_collection=data_collection,
+                table_name=table,
+                chapter_key=chapter_key,
+                templates=stgs.TEMPLATES,
+                urls=stgs.URLS,
+                etl_config=stgs.ETL_CONFIG
+            )
 
             # retrieve function callable and args
             f_name = config["f"]
@@ -88,25 +83,26 @@ def update_tables(
             res = u.call_func(func=f_call, args_dict=f_args)
 
             # placeholder for the time being: return results
-            for table_key in res:
-                logging.info(f"Validating schema for {table_key}")
+            for table_sheet in res:
+                logging.info(f"Validating schema for {table_sheet}")
                 df = tr.validate_schema(
                     data_collection=data_collection,
-                    table_key=table_key,
-                    df=res[table_key],
+                    table_name=table_sheet,
+                    df=res[table_sheet],
                     schema_dict=stgs.SCHEMA)
 
                 # write into raw table
-                logging.info(f"Ingesting table {table_key}")
+                logging.info(f"Ingesting table {table_sheet}")
                 to_table = data_collection + "_raw"
                 ingest_id = sql.ingest_frame(
                     df=df,
-                    table_name=table_key,
+                    table_name=table_sheet,
                     to_table=to_table,
+                    data_collection=data_collection,
                     url=f_args["url"],
                     conn_path=stgs.DB_PATH
                 )
-                logging.info(f"Table {table_key} ingest successful with id {ingest_id}")
+                logging.info(f"Table {table_sheet} ingest successful with id {ingest_id}")
 
     except Exception as e:
         logging.error(f"ETL tailed for {data_collection}: \n{e}")
@@ -129,8 +125,7 @@ def update_all_tables(data_collection: str):
         table_list = config[chapter_key].keys()
 
         update_tables(data_collection=data_collection,
-                      table_list=table_list,
-                      raw_table_names=False)
+                      table_list=table_list)
     logging.info(f"All chapters processed for {data_collection}")
     return None
 

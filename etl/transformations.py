@@ -1,6 +1,6 @@
 import datetime
 from etl.input_output import read_and_wrangle_wb
-from utils import table_key_to_name, remove_note_tags
+from utils import remove_note_tags
 import pandas as pd
 from config.settings import DTYPES
 
@@ -76,8 +76,7 @@ def process_sheet_to_frame(
         table.set_index(list(template.columns) + [var_to_melt],
                         inplace=True)
 
-        output_name = data_collection + "_" + sheet.replace(".", "_")
-        out.update({output_name: table})
+        out.update({sheet: table})
 
     return out
 
@@ -136,7 +135,7 @@ def process_dukes_1_1_5(url: str):
     index_cols = ["year", "sector", "fuel"]
     res.set_index(index_cols, inplace=True)
 
-    return {"dukes_1_1_5": res}
+    return {"1.1.5": res}
 
 
 
@@ -218,21 +217,20 @@ def process_multi_sheets_to_frame(
     res.set_index(list(template.columns) + ["fuel", "year"],
                  inplace=True)
 
-    output_name = data_collection  + "_" + table_name.replace(".", "_")
-    return {output_name: res}
+    return {table_name: res}
 
 
 
 def validate_schema(
         data_collection: str,
-        table_key: str,
+        table_name: str,
         df: pd.DataFrame,
         schema_dict: dict
 ):
 
     # check for duplicates
     if df.index.duplicated().sum() > 0:
-        raise ValueError(f"There are duplicates in table {table_key} of data collection {data_collection}. Check mapping table.")
+        raise ValueError(f"There are duplicates in table {table_name} of data collection {data_collection}. Check mapping table.")
 
     schema = schema_dict[data_collection]
 
@@ -240,17 +238,14 @@ def validate_schema(
     df.reset_index(drop=False, inplace=True)
 
 
-    # add id cols as a column
-    table_name = table_key_to_name(table_key=table_key,
-                                   data_collection=data_collection)
+    # add id cols as a column                               data_collection=data_collection)
     df["table_name"] = table_name
-    df["data_collection"] = data_collection
 
     # check data types and cast
     for col_name in df:
 
         if col_name not in schema:
-            raise ValueError(f"Unexpected column not in schema for table {table_key}: {col_name}")
+            raise ValueError(f"Unexpected column not in schema for table {data_collection} {table_name}: {col_name}")
 
         exp_dtype = schema[col_name]["type"]
         exp_null = schema[col_name]["nullable"]
@@ -264,7 +259,7 @@ def validate_schema(
             # but there should be non-null values
             non_null_count = df[col_name].notnull().sum()
             if non_null_count == 0:
-                raise ValueError(f"Values cannot be parse to numeric data. Check transformator for table {table_key}.")
+                raise ValueError(f"Values cannot be parse to numeric data. Check transformator for table {data_collection} {table_name}.")
 
         elif DTYPES[exp_dtype] is int:
             df[col_name] = pd.to_numeric(df[col_name],

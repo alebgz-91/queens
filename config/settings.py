@@ -12,7 +12,7 @@ config_ini = ConfigParser()
 config_ini.read("config/config.ini")
 
 DB_PATH = config_ini["DATABASE"]["db_path"]
-
+EXPORT_PATH = config_ini["EXPORTING"]["export_path"]
 
 # load .json configuration into dictionaries of variables
 TEMPLATES = parse_json("config/templates.json")
