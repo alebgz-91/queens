@@ -9,7 +9,7 @@ def process_sheet_to_frame(
         data_collection: str,
         sheet_names: list,
         var_to_melt: str = "Year",
-        map_on_cols: bool = False,
+        transpose_first: bool = False,
         ignore_mapping: bool = False,
         id_var_position: int = None,
         id_var_name: str = None,
@@ -28,7 +28,7 @@ def process_sheet_to_frame(
         url: the full HTML path of the workbook
         data_collection: name of the series the workbook belongs to (i.e. "dukes")        sheet_names: list of sheets to be processed
         var_to_melt: if map_on_cols is False, this is the name of the variable on the columns, otherwise is the name of the index column. Default is "Year"
-        map_on_cols: whether to transpose the table before mapping to the template. Default is False.
+        transpose_first: whether to transpose the table before doing any reshaping. This will use var_to_mel as name for the transposed column headings
         ignore_mapping: if True, ignores the template and reconstructs the index columns using input data
         id_var_position: the 0-indexed position of the column to use as "label" and primary index
         id_var_name: the logical name that the column in id_var_position should assume on the final dataset
@@ -46,7 +46,7 @@ def process_sheet_to_frame(
     for sheet in sheet_names:
 
         # get table from GOV.UK
-        if map_on_cols:
+        if transpose_first:
             table = (read_and_wrangle_wb(file_path = url,
                                          sheet_name = sheet)
                      .set_index(var_to_melt)
