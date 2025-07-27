@@ -1,4 +1,3 @@
-import datetime
 from etl.input_output import read_and_wrangle_wb
 from utils import remove_note_tags
 import pandas as pd
@@ -10,7 +9,12 @@ def process_sheet_to_frame(
         data_collection: str,
         sheet_names: list,
         var_to_melt: str = "Year",
-        map_on_cols: bool = False):
+        map_on_cols: bool = False,
+        ignore_mapping: bool = False,
+        id_var_position: int = None,
+        id_var_name: str = None,
+        unit: str = None
+):
     """
     A chapter-agnostic function that processes individual sheets into separate frames.
     The list of sheet provided will be parsed and each worksheet will be returned as an individual
@@ -25,10 +29,17 @@ def process_sheet_to_frame(
         data_collection: name of the series the workbook belongs to (i.e. "dukes")        sheet_names: list of sheets to be processed
         var_to_melt: if map_on_cols is False, this is the name of the variable on the columns, otherwise is the name of the index column. Default is "Year"
         map_on_cols: whether to transpose the table before mapping to the template. Default is False.
+        ignore_mapping: if True, ignores the template and reconstructs the index columns using input data
+        id_var_position: the 0-indexed position of the column to use as "label" and primary index
+        id_var_name: the logical name that the column in id_var_position should assume on the final dataset
+        unit: string for unit in table
 
     Returns:
 
     """
+
+    if ignore_mapping and not (id_var_name or id_var_position or unit):
+        raise ValueError("Must provide details of id columns.")
 
     out = {}
 
@@ -45,25 +56,47 @@ def process_sheet_to_frame(
             table = read_and_wrangle_wb(file_path = url,
                                         sheet_name = sheet)
 
-        # first columns is dropped unless otherwise specified
-        table.drop(columns = table.columns[0],
-                inplace=True)
+        if ignore_mapping:
 
-        # get corresponding template
-        template = read_and_wrangle_wb(file_path = template_file_path,
-                                       sheet_name = sheet)
+            # in this case, all index vars need to be reconstructed from
+            # available data and from user input
+            table.index.name = "row"
+            table.reset_index(drop=False, inplace=True)
+            id_var_original_name = table.columns[id_var_position]
 
-        # join with template
-        table = pd.merge(table,
-                         template,
-                         right_on = "row",
-                         left_index = True)
+            table["label"] = table[id_var_original_name]
+            table = table.rename(
+                columns={id_var_original_name: id_var_name}
+            )
+            table["unit"] = unit
+
+            id_vars = ["row",
+                       "label",
+                       "unit",
+                       id_var_name]
+        else:
+            # all id columns come from template
+            # first columns is dropped unless otherwise specified
+            table.drop(columns = table.columns[0],
+                    inplace=True)
+
+            # get corresponding template
+            template = read_and_wrangle_wb(file_path = template_file_path,
+                                           sheet_name = sheet)
+
+            # join with template
+            table = pd.merge(table,
+                             template,
+                             right_on = "row",
+                             left_index = True)
+
+            id_vars = list(template.columns)
 
         # variable on columns to lowercase
         var_to_melt = var_to_melt.lower()
 
         table = pd.melt(table,
-                        id_vars = list(template.columns),
+                        id_vars = id_vars,
                         var_name = var_to_melt,
                         value_name = "value")
 
@@ -73,7 +106,7 @@ def process_sheet_to_frame(
                 table[c] = table[c].apply(remove_note_tags)
 
         # set index
-        table.set_index(list(template.columns) + [var_to_melt],
+        table.set_index(id_vars + [var_to_melt],
                         inplace=True)
 
         out.update({sheet: table})
@@ -144,7 +177,15 @@ def process_multi_sheets_to_frame(
         url: str,
         template_file_path: str,
         data_collection: str,
-        table_name: str):
+        table_name: str,
+        var_on_sheets: str = "year",
+        var_on_cols: str = "fuel",
+        skip_sheets: list = None,
+        ignore_mapping: bool = False,
+        id_var_position: int = None,
+        id_var_name: str = None,
+        unit: str = None
+):
     """
     A chapter-agnostic function for processing multisheet workbooks
     where each year is reported on a separate sheet, while columns on each sheet need to be melted.
@@ -155,17 +196,28 @@ def process_multi_sheets_to_frame(
         template_file_path: local path of mapping template
         url: the full HTTP address of the table
         table_name: the DUKES table number (x.y.z)
+        var_on_cols: name of the column headings variable (default is fuel)
+        var_on_sheets: name of the variable on sheet names (default is year)
+        skip_sheets: list of sheets to discard
+        ignore_mapping: if True, ignores the template and reconstructs index variables with input data
+        id_var_position: 0-indexed column position for the "label" variable
+        id_var_name: the name that the row index label should assume in the final dtaset
+        unit: string for unit
 
     Returns:
         a dictionary containing the transformed sheets as a single dataframe
     """
-    # read the whole workbook
-    print(url)
-    wb = read_and_wrangle_wb(url)
+    if ignore_mapping and not (id_var_position or id_var_name or unit):
+        raise ValueError("must provide id columns details.")
 
-    # read the template
-    template = read_and_wrangle_wb(template_file_path,
-                                   sheet_name=table_name)
+    # read the whole workbook
+    wb = read_and_wrangle_wb(url,
+                                 skip_sheets=skip_sheets)
+
+    if not ignore_mapping:
+        # read the template
+        template = read_and_wrangle_wb(template_file_path,
+                                       sheet_name=table_name)
 
     res = pd.DataFrame()
 
@@ -178,23 +230,40 @@ def process_multi_sheets_to_frame(
             continue
 
         tab = wb[sheet]
-        tab.drop(columns=tab.columns[0],
-                 inplace=True)
 
-        # get index data from template
-        tab = pd.merge(tab,
-                       template,
-                       left_index=True,
-                       right_on="row")
+        if ignore_mapping:
+            tab.index.name = "row"
+            tab.reset_index(drop=False, inplace=True)
+
+            id_var_original_name = tab.columns[id_var_position]
+            tab["label"] = tab[id_var_original_name]
+            tab = tab.rename(
+                columns={id_var_original_name: id_var_name}
+            )
+            tab["unit"] = unit
+            id_vars = ["row", "label", id_var_name, "unit"]
+
+        else:
+        # all id vars come from template
+            tab.drop(columns=tab.columns[0],
+                     inplace=True)
+
+            # get index data from template
+            # template is defined if ignore_mapping = False
+            tab = pd.merge(tab,
+                           template,
+                           left_index=True,
+                           right_on="row")
+            id_vars = list(template.columns)
 
         # flatten
         tab = pd.melt(tab,
-                      id_vars=template.columns,
-                      var_name="fuel",
+                      id_vars=id_vars,
+                      var_name=var_on_cols,
                       value_name="value")
 
-        # add year from sheet name
-        tab["year"] = int(sheet)
+        # add sheet name as a variable
+        tab[var_on_sheets] = int(sheet)
 
         # append to master
         res = pd.concat([res, tab], axis=0)
@@ -214,7 +283,7 @@ def process_multi_sheets_to_frame(
             res[c] = res[c].apply(remove_note_tags)
 
     # set index
-    res.set_index(list(template.columns) + ["fuel", "year"],
+    res.set_index(id_vars + [var_on_sheets, var_on_cols],
                  inplace=True)
 
     return {table_name: res}
