@@ -13,7 +13,9 @@ import datetime
 
 def read_and_wrangle_wb(
         file_path: str,
-        sheet_name: str = None):
+        sheet_name: str = None,
+        skip_sheets: list = None
+):
 
     """
     Read Excel workbooks removing unnecessary header rows.
@@ -24,6 +26,7 @@ def read_and_wrangle_wb(
     Args:
         file_path: `io` argument in read_excel
         sheet_name: name of sheet to read
+        skip_sheets: list of sheets to ignore when parsing the whole workbook.
 
     Returns:
         a dictionary of `pd.Dataframe is sheet_name = None or a pd.DataFrame otherwise`
@@ -37,6 +40,8 @@ def read_and_wrangle_wb(
 
     if sheet_name is not None:
         sheets = [sheet_name]
+    elif skip_sheets:
+        sheets = set(sheets) - set(skip_sheets)
 
     # parse each worksheet removing headers
     wb_as_dict = {}
