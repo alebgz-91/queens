@@ -37,6 +37,18 @@
       "type": "TEXT",
       "nullable": true
     },
+    "technology": {
+      "type": "TEXT",
+      "nullable": true
+    },
+    "country": {
+      "type": "TEXT",
+      "nullable": true
+    },
+    "region": {
+      "type": "TECT",
+      "nullable": true
+    },
     "sector": {
       "type": "TEXT",
       "nullable": true
@@ -46,6 +58,10 @@
       "nullable": true
     },
     "fuel": {
+      "type": "TEXT",
+      "nullable": true
+    },
+    "subfuel": {
       "type": "TEXT",
       "nullable": true
     },
