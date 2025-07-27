@@ -159,26 +159,33 @@ def raw_to_prod(
     staging_query = f"""
 
         CREATE TABLE {table_prefix}_prod AS
-        WITH current_ids AS
+        WITH current_ts AS
         (
             SELECT 
-                *
-                ,ROW_NUMBER() OVER (PARTITION BY table_name ORDER BY ingest_ts DESC) as rank
+                table_name
+                ,MAX(ingest_ts) as ingest_ts
             FROM 
                 _ingest_log
             WHERE
                 ingest_ts <= ?
                 AND data_collection = ?
+                AND success = 1
+            GROUP BY
+                table_name
         )
 
         SELECT
-            log.ingest_id
-            ,log.ingest_ts
+            log.ingest_ts
             ,data.*
         FROM 
             {table_prefix}_raw AS data
+        JOIN
+            current_ts as ts
+        ON
+            log.ingest_ts = ts.ingest_ts
+            AND log.table_name = ts.table_name
         JOIN 
-            current_ids as log
+            _ingest_log as log
         ON 
             data.ingest_id = log.ingest_id;
 
