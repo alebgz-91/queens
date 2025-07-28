@@ -13,6 +13,7 @@ import datetime
 
 def read_and_wrangle_wb(
         file_path: str,
+        has_multi_headers: bool = False,
         sheet_name: str = None,
         skip_sheets: list = None
 ):
@@ -25,6 +26,7 @@ def read_and_wrangle_wb(
 
     Args:
         file_path: `io` argument in read_excel
+        has_multi_headers: whether the table has a two-level column headings that starts on column B. If columb B has a single header, it will be ignored automatically.
         sheet_name: name of sheet to read
         skip_sheets: list of sheets to ignore when parsing the whole workbook.
 
@@ -62,6 +64,10 @@ def read_and_wrangle_wb(
             h += 1
             df = wb.parse(sheet, header=h)
 
+        # remove another row if table has multiindex columns
+        if has_multi_headers:
+            df = wb.parse(sheet, header=h+1)
+
         # add to dictionary
         wb_as_dict.update({sheet: df})
 
@@ -80,47 +86,45 @@ def read_and_wrangle_wb(
 
 def get_dukes_urls(url):
     """
-    Use requests and BeautifulSoup to extract links to Excel
-    files from the GOV.UK website and organise them into
-    a dictionary with the following structure:
-    ```
-    {"dukes_table_no":
-        {"name": "table_name",
-        "url": "table url.xlsx"}
-    ...}
-
-    All the parameters are inferred from the webpage content. Table numbers
-    are extracted from the URL title as well as the table name, the URL is automatically parsed.
+    Scrapes GOV.UK for links to DUKES Excel tables, extracting their numbers and URLs.
 
     Args:
-        url: the HTTP address of the DUKES chapter
+        url (str): The URL of the DUKES chapter page.
 
     Returns:
-        a dictionary of DUKES tables with their respective urls.
+        dict: Dictionary in the form:
+              {
+                  "1.1": {
+                      "name": "DUKES 1.1 Table name",
+                      "url": "https://..."
+                  },
+                  ...
+              }
     """
-
-    # Fetch the page content
     response = requests.get(url)
     soup = BeautifulSoup(response.content, "html.parser")
-
-    # Initialize the result dictionary
     dukes_tables = {}
 
-    # Find all links to Excel files
     for link in soup.find_all("a", href=True):
         href = link["href"]
-        if href.endswith(".xlsx") or href.endswith(".xls"):
-            # Extract the table number using regex
-            match = re.search(r"DUKES\s*(([A-Z]|\d+)(\.\d+)*)([a-z]*)",
-                              link.text,
+        if href.lower().endswith((".xlsx", ".xls")):
+            link_text = link.text.strip()
+
+            # Allow optional comma and whitespace between DUKES and number
+            match = re.search(r"DUKES[\s,]*((\d+)(\.\d+)*)([a-z]*)",
+                              link_text,
                               re.IGNORECASE)
+
             if match:
                 table_number = match.group(1)
                 suffix = match.group(4).lower()
                 key = f"{table_number}{suffix}"
-                name = link.text.strip()
                 full_url = href if href.startswith("http") else f"https://www.gov.uk{href}"
-                dukes_tables[key] = {"name": name, "url": full_url}
+
+                dukes_tables[key] = {
+                    "name": link_text,
+                    "url": full_url
+                }
 
     return dukes_tables
 
