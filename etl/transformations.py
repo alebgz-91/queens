@@ -1,3 +1,5 @@
+from IPython.testing.decorators import skip_if_no_x11
+
 from etl.input_output import read_and_wrangle_wb
 from utils import remove_note_tags
 import pandas as pd
@@ -9,6 +11,7 @@ def process_sheet_to_frame(
         data_collection: str,
         sheet_names: list,
         var_to_melt: str = "Year",
+        has_multi_headers: bool = False,
         transpose_first: bool = False,
         ignore_mapping: bool = False,
         id_var_position: int = None,
@@ -28,6 +31,7 @@ def process_sheet_to_frame(
         url: the full HTML path of the workbook
         data_collection: name of the series the workbook belongs to (i.e. "dukes")        sheet_names: list of sheets to be processed
         var_to_melt: if map_on_cols is False, this is the name of the variable on the columns, otherwise is the name of the index column. Default is "Year"
+        has_multi_headers: whether the table as a 2-levels header that starts on column B.
         transpose_first: whether to transpose the table before doing any reshaping. This will use var_to_mel as name for the transposed column headings
         ignore_mapping: if True, ignores the template and reconstructs the index columns using input data
         id_var_position: the 0-indexed position of the column to use as "label" and primary index
@@ -47,21 +51,25 @@ def process_sheet_to_frame(
 
         # get table from GOV.UK
         if transpose_first:
-            table = (read_and_wrangle_wb(file_path = url,
-                                         sheet_name = sheet)
+            print(url)
+
+            table = (read_and_wrangle_wb(file_path=url,
+                                         sheet_name=sheet,
+                                         has_multi_headers=has_multi_headers)
                      .set_index(var_to_melt)
                      .T
                      .reset_index(drop=False))
+
         else:
             table = read_and_wrangle_wb(file_path = url,
-                                        sheet_name = sheet)
+                                        sheet_name = sheet,
+                                        has_multi_headers=has_multi_headers)
 
         if ignore_mapping:
 
             # in this case, all index vars need to be reconstructed from
             # available data and from user input
-            table.index.name = "row"
-            table.reset_index(drop=False, inplace=True)
+            table["row"] = range(len(table))
             id_var_original_name = table.columns[id_var_position]
 
             table["label"] = table[id_var_original_name]
@@ -74,6 +82,7 @@ def process_sheet_to_frame(
                        "label",
                        "unit",
                        id_var_name]
+
         else:
             # all id columns come from template
             # first columns is dropped unless otherwise specified
@@ -139,8 +148,7 @@ def process_dukes_1_1_5(url: str):
         tab = read_and_wrangle_wb(url, sheet_name=s)
 
         # get row number as a column
-        tab.index.name = "row"
-        tab.reset_index(drop=False, inplace=True)
+        tab["row"] = range(len(tab))
 
         # keep original column
         tab["label"] = tab["Year"].astype(str)
@@ -180,6 +188,7 @@ def process_multi_sheets_to_frame(
         table_name: str,
         var_on_sheets: str = "year",
         var_on_cols: str = "fuel",
+        has_multi_headers: bool = False,
         skip_sheets: list = None,
         ignore_mapping: bool = False,
         id_var_position: int = None,
@@ -196,6 +205,7 @@ def process_multi_sheets_to_frame(
         template_file_path: local path of mapping template
         url: the full HTTP address of the table
         table_name: the DUKES table number (x.y.z)
+        has_multi_headers: whether the table as a 2-level header that starts on column B
         var_on_cols: name of the column headings variable (default is fuel)
         var_on_sheets: name of the variable on sheet names (default is year)
         skip_sheets: list of sheets to discard
@@ -217,7 +227,9 @@ def process_multi_sheets_to_frame(
     if not ignore_mapping:
         # read the template
         template = read_and_wrangle_wb(template_file_path,
-                                       sheet_name=table_name)
+                                       sheet_name=table_name,
+                                       skip_sheets=skip_sheets,
+                                       has_multi_headers=has_multi_headers)
 
     res = pd.DataFrame()
 
@@ -232,19 +244,21 @@ def process_multi_sheets_to_frame(
         tab = wb[sheet]
 
         if ignore_mapping:
-            tab.index.name = "row"
-            tab.reset_index(drop=False, inplace=True)
 
+            tab["row"] = range(len(tab))
             id_var_original_name = tab.columns[id_var_position]
             tab["label"] = tab[id_var_original_name]
             tab = tab.rename(
                 columns={id_var_original_name: id_var_name}
             )
             tab["unit"] = unit
-            id_vars = ["row", "label", id_var_name, "unit"]
+            id_vars = ["row",
+                       "label",
+                       id_var_name,
+                       "unit"]
 
         else:
-        # all id vars come from template
+            # all id vars come from template
             tab.drop(columns=tab.columns[0],
                      inplace=True)
 

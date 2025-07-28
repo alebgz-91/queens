@@ -85,7 +85,7 @@
 
         "chapter_2": {
             "2.1": {
-                "f": "process_multi_sheet_to_frame",
+                "f": "process_multi_sheets_to_frame",
                 "f_args": {
                     "table_name": "2.1",
                     "skip_sheets": ["2.1"]
@@ -114,7 +114,7 @@
             },
 
             "2.7": {
-                "f": "process_multi_sheet_to_frame",
+                "f": "process_multi_sheets_to_frame",
                 "f_args": {
                     "table_name": "2.7",
                     "ignore_mapping": true,
@@ -125,7 +125,7 @@
             },
 
             "2.8": {
-                "f": "process_multi_sheet_to_frame",
+                "f": "process_multi_sheets_to_frame",
                 "f_args": {
                     "table_name": "2.8",
                     "ignore_mapping": true,
@@ -140,11 +140,7 @@
                 "f_args": {
                     "sheet_names": ["2.1.1"],
                     "transpose_first": true,
-                    "ignore_mapping": true,
-                    "var_to_melt": "Year",
-                    "id_var_position": 0,
-                    "id_var_name": "item",
-                    "unit": "kt"
+                    "has_multi_headers": true
                 }
             },
 

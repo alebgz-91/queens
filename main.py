@@ -1,7 +1,17 @@
 import typer
 from typing import Optional, List
+import logging
+import sys
 
-from param import output
+# enable logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler("data/logs/etl.log"),
+        logging.StreamHandler()
+    ]
+)
 
 from etl.process import *
 from etl.input_output import export_all, export_table

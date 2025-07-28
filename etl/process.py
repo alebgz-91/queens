@@ -12,18 +12,6 @@ import pandas as pd
 from tabulate import tabulate
 
 
-# enable logging
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.FileHandler("data/logs/etl.log"),
-        logging.StreamHandler()
-    ]
-)
-
-
 def update_tables(
         data_collection: str,
         table_list: list,
