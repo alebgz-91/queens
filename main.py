@@ -58,7 +58,7 @@ def versions(
 @app.command()
 def export(
         collection: str,
-        format: Optional[str] = typer.Option(None, "--table", "-t", help="Format to use for export. Options are csv, parquet or xlsx, default is xsc"),
+        file_type: Optional[str] = typer.Option("csv", "--file-type", "-f", help="Format to use for export. Options are csv, parquet or xlsx, default is xsc"),
         table: Optional[str] = typer.Option(None, "--table", "-t", help="Optional table name to download"),
         path: Optional[str] = typer.Option(EXPORT_PATH, "--path", "-p", help="Optional destination path"),
         bulk: Optional[bool] = typer.Option(False, "--bulk", "-b", help="Whether to save all the data in a single file or not")
@@ -67,7 +67,7 @@ def export(
         typer.echo(f"Exporting {collection} table {table}...")
         export_table(
             data_collection=collection,
-            file_type=format,
+            file_type=file_type,
             output_path=path,
             table_name=table
         )
@@ -76,7 +76,7 @@ def export(
         typer.echo(f"Exporting all tables in {collection}{bulk_str}---")
         export_all(
             data_collection=collection,
-            file_type=format,
+            file_type=file_type,
             output_path=path,
             bulk_export=bulk
         )
