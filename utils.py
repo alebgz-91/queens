@@ -35,12 +35,6 @@ def table_to_chapter(table_number, data_collection):
     Returns: chapter key as a string of the form 'chapter_{chapter_no}'
 
     """
-    # remove data collection from table_number if present
-    if data_collection in table_number:
-        table_number = (table_number
-                        .replace(data_collection, "")[1:]
-                        .replace("_", ".")
-                        .upper())
 
     first_char = table_number[0]
 
@@ -72,11 +66,15 @@ def check_inputs (data_collection: str,
 
     """
     if data_collection not in etl_config:
-        raise ValueError(f"{data_collection} data not found")
+        raise NameError(f"{data_collection} data not found")
     elif table_name is not None:
+        found = 0
         for chapter_key in etl_config[data_collection]:
-                if table_name not in etl_config[data_collection][chapter_key]:
-                    raise ValueError(f"Table {table_name} value not found in {data_collection}")
+            if table_name in etl_config[data_collection][chapter_key]:
+                found += 1
+        if found == 0:
+            raise NameError(f"Table {table_name} value not found in {data_collection}")
+
     return True
 
 

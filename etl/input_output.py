@@ -170,8 +170,7 @@ def export_table(
         file_type: str,
         table_name: str,
         output_path: str,
-output_ts: str = None
-
+        output_ts: str = None
 ):
     """
     Utility that can export a specific table_name within a data_collection to
@@ -192,6 +191,8 @@ output_ts: str = None
         if output_ts is None:
             output_ts = str(datetime.date.today())
 
+        # get absolute path and normalise path format
+        output_path = os.path.abspath(output_path)
 
         # read data from sql
         query = f"""
@@ -206,6 +207,7 @@ output_ts: str = None
                                    query_params=(table_name,))
 
         file_name = (data_collection
+                     + "_"
                      + table_name.replace(".","_")
                      + "_"
                      + output_ts
@@ -214,11 +216,11 @@ output_ts: str = None
 
         logging.info(f"Saving {data_collection} {table_name} to {file_type}")
         if file_type == "csv":
-            df.to_csv(output_path)
+            df.to_csv(output_path, index=False)
         elif file_type == "parquet":
-            df.to_parquet(output_path)
+            df.to_parquet(output_path, index=False)
         elif file_type == "xlsx":
-            df.to_excel(output_path, sheet_name=table_name)
+            df.to_excel(output_path, sheet_name=table_name, index=False)
         else:
             raise TypeError(f"Exporting unsupported to file type {file_type}.")
 
@@ -248,6 +250,8 @@ def export_all(
 
     """
 
+    # get absolute path and current timestamp
+    output_path = os.path.abspath(output_path)
     output_ts = str(datetime.date.today())
 
     try:
@@ -281,16 +285,18 @@ def export_all(
             logging.info(f"Saving {data_collection} to {file_type}.")
 
             if file_type == "csv":
-                df.to_csv(output_path)
+                df.to_csv(output_path, index=False)
             elif file_type == "parquet":
-                df.to_parquet(output_path)
+                df.to_parquet(output_path, index=False)
             elif file_type == "xlsx":
                 # save one table per sheet in a single workbook
                 logging.info(f"Creating workbook {output_path + file_name}.")
                 with pd.ExcelWriter(output_path) as wr:
 
                     for table_name in df["table_name"].unique():
-                        df[df.table_name == table_name].to_excel(wr, sheet_name=table_name)
+                        df[df.table_name == table_name].to_excel(wr,
+                                                                 sheet_name=table_name,
+                                                                 index=False)
 
 
             else:
