@@ -17,7 +17,7 @@ EXPORT_PATH = config_ini["EXPORTING"]["export_path"]
 # load .json configuration into dictionaries of variables
 TEMPLATES = parse_json("config/templates.json")
 URLS = parse_json("config/urls.json")
-ETL_CONFIG = parse_json("config/etl_config.lson")
+ETL_CONFIG = parse_json("config/etl_config.json")
 
 # data type dict for schema enforcement
 DTYPES = {
