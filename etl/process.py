@@ -1,8 +1,8 @@
-from src import utils as u
+import etl.table_specs as ts
+import src.read_write as rw
+import src.utils as u
 import etl.transformations as tr
-import src.read_write as io
-import config.settings as stgs
-import src.sql_utils as sql
+import config.settings as s
 import logging
 import datetime
 import pandas as pd
@@ -33,37 +33,37 @@ def update_tables(
     try:
         # create the raw table if it does not exist
         logging.info("Creating table sql tables if not exist")
-        sql_create_main_tab = sql.generate_create_table_sql(
+        sql_create_main_tab = u.generate_create_table_sql(
             table_prefix=data_collection,
             table_env="raw",
-            schema_dict=stgs.SCHEMA
+            schema_dict=s.SCHEMA
         )
 
-        sql_create_log = sql.generate_create_log_sql()
+        sql_create_log = u.generate_create_log_sql()
 
-        sql.execute_sql(
-            conn_path=stgs.DB_PATH,
+        rw.execute_sql(
+            conn_path=s.DB_PATH,
             sql=sql_create_log + "\n" + sql_create_main_tab
         )
 
         for table in table_list:
 
             u.check_inputs(data_collection=data_collection,
-                         table_name=table,
-                         etl_config=stgs.ETL_CONFIG)
+                           table_name=table,
+                           etl_config=s.ETL_CONFIG)
 
             chapter_key = u.table_to_chapter(table_number=table,
                                            data_collection=data_collection)
 
             # generate config dictionary
             logging.info(f"Getting config for table: {table}")
-            config = io.generate_config(
+            config = ts.generate_config(
                 data_collection=data_collection,
                 table_name=table,
                 chapter_key=chapter_key,
-                templates=stgs.TEMPLATES,
-                urls=stgs.URLS,
-                etl_config=stgs.ETL_CONFIG
+                templates=s.TEMPLATES,
+                urls=s.URLS,
+                etl_config=s.ETL_CONFIG
             )
 
             # retrieve function callable and args
@@ -78,22 +78,22 @@ def update_tables(
             # placeholder for the time being: return results
             for table_sheet in res:
                 logging.info(f"Validating schema for {table_sheet}")
-                df = tr.validate_schema(
+                df = ts.validate_schema(
                     data_collection=data_collection,
                     table_name=table_sheet,
                     df=res[table_sheet],
-                    schema_dict=stgs.SCHEMA)
+                    schema_dict=s.SCHEMA)
 
                 # write into raw table
                 logging.info(f"Ingesting table {table_sheet}")
                 to_table = data_collection + "_raw"
-                ingest_id = sql.ingest_frame(
+                ingest_id = rw.ingest_frame(
                     df=df,
                     table_name=table_sheet,
                     to_table=to_table,
                     data_collection=data_collection,
                     url=f_args["url"],
-                    conn_path=stgs.DB_PATH,
+                    conn_path=s.DB_PATH,
                     ingest_ts=ingest_ts
                 )
                 logging.info(f"Table {table_sheet} ingest successful with id {ingest_id}")
@@ -111,13 +111,13 @@ def update_all_tables(data_collection: str):
     try:
         # verify that the data collection exists
         u.check_inputs(data_collection,
-                       etl_config=stgs.ETL_CONFIG)
+                       etl_config=s.ETL_CONFIG)
         # time snapshot
         ingest_ts = datetime.datetime.now().isoformat()
 
         # to get the list of tables look at static config files
         logging.info(f"Updating all tables for {data_collection}")
-        config = stgs.ETL_CONFIG[data_collection]
+        config = s.ETL_CONFIG[data_collection]
 
         # go through each chapter and table
         for chapter_key in config.keys():
@@ -153,7 +153,7 @@ def stage_data(
 
     """
     # check if the data collection exists
-    if data_collection not in stgs.ETL_CONFIG:
+    if data_collection not in s.ETL_CONFIG:
         raise NameError("No such data collection,")
 
     if as_of_date is not None:
@@ -162,8 +162,8 @@ def stage_data(
         as_of_date = datetime.datetime.now().isoformat()
 
     try:
-        sql.raw_to_prod(
-            conn_path=stgs.DB_PATH,
+        rw.raw_to_prod(
+            conn_path=s.DB_PATH,
             table_prefix=data_collection,
             cutoff=as_of_date
         )
@@ -197,14 +197,14 @@ def get_data_info(
         where_clause = None
         query_params = None
 
-    query = sql.generate_select_sql(
+    query = u.generate_select_sql(
         from_table=f"{data_collection}_prod",
         where=where_clause,
         distinct=True
     )
 
-    df = sql.read_sql_as_frame(
-        conn_path=stgs.DB_PATH,
+    df = rw.read_sql_as_frame(
+        conn_path=s.DB_PATH,
         query=query,
         query_params=query_params
     )
@@ -258,22 +258,22 @@ def get_data_versions(
 
     select_block = ["table_name", "ingest_ts"]
 
-    query = sql.generate_select_sql(
+    query = u.generate_select_sql(
         from_table="_ingest_log",
         cols=select_block,
         where=where_clause,
         distinct=True
     )
 
-    df = sql.read_sql_as_frame(conn_path=stgs.DB_PATH,
-                               query=query,
-                               query_params=query_params)
+    df = rw.read_sql_as_frame(conn_path=s.DB_PATH,
+                              query=query,
+                              query_params=query_params)
 
     if df.empty:
         print(f"No ingested versions found for {print_str}.")
         return pd.DataFrame()
 
-    # reshape dataframe into human readable form
+    # reshape dataframe into human-readable form
     df = df.rename(
         columns={
             "table_name": "Table number",

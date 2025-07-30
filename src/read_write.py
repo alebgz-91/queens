@@ -1,13 +1,9 @@
+import sqlite3
 import pandas as pd
-import requests
-from bs4 import BeautifulSoup
-import re
-import src.sql_utils as sql
 import config.settings as stgs
 import os
 import logging
 import datetime
-
 
 
 def read_and_wrangle_wb(
@@ -83,90 +79,6 @@ def read_and_wrangle_wb(
 #TODO: abstract the function below so that it works with other data collections
 # This also requires changing the signature to include a data_collection argument
 
-def get_dukes_urls(url):
-    """
-    Scrapes GOV.UK for links to DUKES Excel tables, extracting their numbers and URLs.
-
-    Args:
-        url (str): The URL of the DUKES chapter page.
-
-    Returns:
-        dict: Dictionary in the form:
-              {
-                  "1.1": {
-                      "name": "DUKES 1.1 Table name",
-                      "url": "https://..."
-                  },
-                  ...
-              }
-    """
-    response = requests.get(url)
-    soup = BeautifulSoup(response.content, "html.parser")
-    dukes_tables = {}
-
-    for link in soup.find_all("a", href=True):
-        href = link["href"]
-        if href.lower().endswith((".xlsx", ".xls")):
-            link_text = link.text.strip()
-
-            # Allow optional comma and whitespace between DUKES and number
-            match = re.search(r"DUKES[\s,]*((\d+)(\.\d+)*)([a-z]*)",
-                              link_text,
-                              re.IGNORECASE)
-
-            if match:
-                table_number = match.group(1)
-                suffix = match.group(4).lower()
-                key = f"{table_number}{suffix}"
-                full_url = href if href.startswith("http") else f"https://www.gov.uk{href}"
-
-                dukes_tables[key] = {
-                    "name": link_text,
-                    "url": full_url
-                }
-
-    return dukes_tables
-
-
-def generate_config(data_collection: str,
-                    table_name: str,
-                    chapter_key: str,
-                    templates: dict,
-                    urls: dict,
-                    etl_config: dict):
-    """
-    Generates a dictionary with all necessary information for the ETL to run properly on a table.
-    This requires environment variables to be set correctly in the config/ directory.
-    Args:
-        data_collection: the collection the table belongs to
-        table_name: table number
-        chapter_key: chapter of the table in the form "chapter_x"
-        templates: dictionary of templates by data_collection. Should be set in config/.
-        urls: dictionary of URLs for individual chapter by data_collections. Should be set in config/.
-        etl_config: detailed runtime parameters for the ETL. Should be set in config/.
-
-    Returns:
-
-    """
-    # get static config dict
-    config = etl_config[data_collection][chapter_key][table_name]
-
-    # determine table url
-    chapter_page_url = urls[data_collection][chapter_key]
-    url = get_dukes_urls(url=chapter_page_url)[table_name]["url"]
-
-    # determine the template file path
-    template_file_path = templates[data_collection][chapter_key]
-
-    # add url, template_path and data_collection to f_args
-    config["f_args"].update({
-        "url": url,
-        "template_file_path": template_file_path,
-        "data_collection": data_collection
-    })
-
-    return config
-
 
 def export_table(
         data_collection: str,
@@ -177,7 +89,7 @@ def export_table(
 ):
     """
     Utility that can export a specific table_name within a data_collection to
-    flat files. Suports csv, parquet and Excel (xlsx)
+    flat files. Supports csv, parquet and Excel (xlsx)
     Args:
         data_collection: the data collection name
         output_path:
@@ -205,9 +117,9 @@ def export_table(
             WHERE 
                 table_name = ?
         """
-        df = sql.read_sql_as_frame(conn_path=stgs.DB_PATH,
-                                   query=query,
-                                   query_params=(table_name,))
+        df = read_sql_as_frame(conn_path=stgs.DB_PATH,
+                               query=query,
+                               query_params=(table_name,))
 
         file_name = (data_collection
                      + "_"
@@ -241,12 +153,13 @@ def export_all(
 ):
     """
     Export all table sin a given data_collection to flat files. Supports csv, parquet and Excel file types.
-    Tables can either be saved as individual files (bulk = False, the detault) or
+    Tables can either be saved as individual files (bulk = False, the default) or
     as a sigle file (bulk = True). For bulk export to Excel, the individual tables are
     written to separate sheets of the same workbook.
     Args:
         data_collection: Name of the data collection
         file_type: Either 'csv', 'parquet' of 'xlsx'
+        output_path: where to export the outputs
         bulk_export: if True, exports all tables into a single file. Default is False
 
     Returns:
@@ -275,13 +188,13 @@ def export_all(
 
                 logging.info(f"Finished exporting [chapter]")
 
-            logging.info(f"All tables from {data_collection} exported succesfully to {file_type}")
+            logging.info(f"All tables from {data_collection} exported with success to {file_type}")
 
         else:
             # export all tables in the data collection to a single file
             logging.info(f"Reading the {data_collection} production table.")
-            df = sql.read_sql_as_frame(conn_path=stgs.DB_PATH,
-                                       query=f"SELECT * FROM {data_collection}_prod")
+            df = read_sql_as_frame(conn_path=stgs.DB_PATH,
+                                   query=f"SELECT * FROM {data_collection}_prod")
             file_name = f"{data_collection}_{output_ts}.{file_type}"
             output_path = os.path.join(output_path, file_name)
 
@@ -311,3 +224,176 @@ def export_all(
         logging.error(f"Export failed for {table_name}: \n{e}")
 
 
+def execute_sql(
+        conn_path: str,
+        sql: str
+):
+    """
+    Executes a SQL statement with optional parameters.
+
+    Args:
+        conn_path: For SQLite this is simply the path of the .db file
+        sql: query to execute as a string. Must be prepared with placeholders (?) is sql_parameters is not None
+
+    Returns:
+        None
+
+    """
+    # get cursor
+    with sqlite3.connect(conn_path) as conn:
+        cursor = conn.cursor()
+
+        cursor.executescript(sql)
+
+    return None
+
+
+def ingest_frame(
+        df: pd.DataFrame,
+        to_table: str,
+        table_name: str,
+        data_collection: str,
+        url: str,
+        conn_path: str,
+        ingest_ts: str
+):
+    """
+    Ingests a pandas dataframe and saves an ingest log entry.
+
+    Args:
+        df: pandas dataframe to insert
+        to_table: name of the destination data table
+        table_name: logical table name (e.g., "dukes_1_1")
+        data_collection: name of data collection
+        url: source URL of the data
+        conn_path: path to SQLite DB
+        ingest_ts: timestamp string to save into the ingest log table
+
+    Returns:
+        ingest_id: ID of the ingest log row
+    """
+    # validate to_table and data_collection
+    if data_collection not in to_table:
+        logging.warning(f"Writing to table {to_table} but data collection is {data_collection}")
+
+    with sqlite3.connect(conn_path) as conn:
+        cursor = conn.cursor()
+
+        # Insert a log entry first
+        cursor.execute(
+            """
+            INSERT INTO _ingest_log 
+                (ingest_ts
+                , data_collection
+                , table_name
+                , url
+                , success)
+            VALUES (?, ?, ?, ?, 0)
+            """,
+            (ingest_ts, data_collection, table_name, url)
+        )
+
+        # get lastrowid
+        ingest_id = cursor.lastrowid
+
+        # tag dataframe with ingest_id
+        df["ingest_id"] = ingest_id
+
+        try:
+            df.to_sql(to_table, conn, if_exists="append", index=False)
+
+            # Update success flag in log
+            cursor.execute(
+                """
+                UPDATE _ingest_log
+                SET success = 1
+                WHERE ingest_id = ?
+                """,
+                (ingest_id,)
+            )
+
+        except Exception as e:
+            raise e
+
+    return ingest_id
+
+
+def raw_to_prod(
+        conn_path: str,
+        table_prefix: str,
+        cutoff: str
+):
+    staging_query = f"""
+
+        CREATE TABLE {table_prefix}_prod AS
+        WITH current_ts AS
+        (
+            SELECT 
+                table_name
+                ,MAX(ingest_ts) as ingest_ts
+            FROM 
+                _ingest_log
+            WHERE
+                ingest_ts <= ?
+                AND data_collection = ?
+                AND success = 1
+            GROUP BY
+                table_name
+        )
+
+        SELECT
+            log.ingest_ts
+            ,data.*
+        FROM 
+            {table_prefix}_raw AS data
+        JOIN
+            current_ts as ts
+        ON
+            log.ingest_ts = ts.ingest_ts
+            AND log.table_name = ts.table_name
+        JOIN 
+            _ingest_log as log
+        ON 
+            data.ingest_id = log.ingest_id;
+
+    """
+
+    with sqlite3.connect(conn_path) as conn:
+
+        cursor = conn.cursor()
+
+        # remove previously live data
+        cursor.execute(f"DROP TABLE IF EXISTS {table_prefix}_prod;")
+
+        # write staging table
+        cursor.execute(staging_query,
+                       (cutoff,table_prefix))
+
+        return None
+
+
+def read_sql_as_frame(
+        conn_path: str,
+        query: str,
+        query_params: tuple = None
+):
+    """
+    A wrapper of pd.read_sql_query(), reading custom SQL queries from
+    a database located in conn_str. Supports parametrised queries with positional
+    placeholders (?).
+
+    Args:
+        conn_path: connection string (path of db file
+        query: the SQL query as a string
+        query_params: tuple of query parameters.
+
+    Returns:
+        a pandas dataframe
+
+    """
+    with sqlite3.connect(conn_path) as conn:
+
+        df = pd.read_sql_query(query, conn,
+                               params=query_params)
+
+    return df

@@ -13,8 +13,8 @@ logging.basicConfig(
 )
 
 from etl.process import *
-from src.read_write import export_all, export_table
-from config.settings import EXPORT_PATH
+import src.read_write as rw
+import config.settings as s
 
 app = typer.Typer()
 
@@ -69,12 +69,12 @@ def export(
         collection: str,
         file_type: Optional[str] = typer.Option("csv", "--file-type", "-f", help="Format to use for export. Options are csv, parquet or xlsx, default is xsc"),
         table: Optional[str] = typer.Option(None, "--table", "-t", help="Optional table name to download"),
-        path: Optional[str] = typer.Option(EXPORT_PATH, "--path", "-p", help="Optional destination path"),
+        path: Optional[str] = typer.Option(s.EXPORT_PATH, "--path", "-p", help="Optional destination path"),
         bulk: Optional[bool] = typer.Option(False, "--bulk", "-b", help="Whether to save all the data in a single file or not")
 ):
     if table:
         typer.echo(f"Exporting {collection} table {table}...")
-        export_table(
+        rw.export_table(
             data_collection=collection,
             file_type=file_type,
             output_path=path,
@@ -83,7 +83,7 @@ def export(
     else:
         bulk_str = " as a single file" if bulk else ""
         typer.echo(f"Exporting all tables in {collection}{bulk_str}---")
-        export_all(
+        rw.export_all(
             data_collection=collection,
             file_type=file_type,
             output_path=path,
