@@ -1,11 +1,6 @@
 import fastapi as f
 from typing import Optional, Dict, Any
 import pandas as pd
-from conda.gateways.connection.adapters.ftp import data_callback_factory
-from conda_package_handling.utils import checksums
-from debugpy.launcher.debuggee import describe
-from gensim.similarities.fastss import FastSS
-from panel.examples.gallery.demos.VTKInteractive import description
 import src.utils as u
 
 from src.read_write import read_sql_as_frame
@@ -17,13 +12,15 @@ app = f.FastAPI(title="UK Energy Data API")
 
 @app.get("/data/{collection}")
 def get_data(
-    collection: str,
-    table_name: str = Query(..., description="Name of the table to query (for example, '1.1'"),
-    filters: Optional[Dict[str, Any]] = f.Query(None)
+    collection: str = f.Path(...),
+    table_name: str = f.Query(...,
+                              description="Name of the table to query (for example, '1.1'"),
+    filters: Optional[str] = f.Query(None,
+                                     description="JSON-like string of filters, e.g. {'year': 2020, 'fuel': 'Petroleum products'}.")
 ):
     """
     Fetch data from specific data collection's production table,
-    filtereb by table_name (required) and other optional filters.
+    filtered by table_name (required) and other optional filters.
 
     Args:
         collection: name of source data collection
@@ -36,7 +33,8 @@ def get_data(
 
     try:
         # verify existence of input
-        u.check_inputs(data_collection=collection)
+        u.check_inputs(data_collection=collection,
+                       etl_config=s.ETL_CONFIG)
 
         from_table = f"{collection}_prod"
 
