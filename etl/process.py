@@ -1,11 +1,8 @@
-from conda_build.inspect_pkg import check_install
-from fontTools.ttLib.tables.M_A_T_H_ import table_M_A_T_H_
-
-import utils as u
+from src import utils as u
 import etl.transformations as tr
-import etl.input_output as io
+import src.read_write as io
 import config.settings as stgs
-import sql.sql_utils as sql
+import src.sql_utils as sql
 import logging
 import datetime
 import pandas as pd

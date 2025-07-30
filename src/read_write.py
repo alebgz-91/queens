@@ -1,9 +1,8 @@
-import sqlite3
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 import re
-import sql.sql_utils as sql
+import src.sql_utils as sql
 import config.settings as stgs
 import os
 import logging
