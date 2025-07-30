@@ -119,3 +119,89 @@ def remove_note_tags(text):
 
     pattern = r"\[\s*note\s+\d+\s*\]"  # matches [note x] with optional whitespace
     return re.sub(pattern, "", text, flags=re.IGNORECASE).strip()
+
+
+def generate_create_table_sql(
+        table_prefix: str,
+        table_env: str,
+        schema_dict: dict) -> str:
+    """
+    Function that generates a SQL query string for creating a table
+    with prescribed schema.
+
+    Args:
+        table_prefix: the table identifier, normally the data_collection
+        table_env: either raw or prod
+        schema_dict: a dictionary for table schema of data collections. The first column is assumed to be the index column.
+
+    Returns:
+        the generated query as a string
+
+    """
+    schema_dict = schema_dict[table_prefix]
+
+    destination_table = f"{table_prefix}_{table_env}"
+
+    columns = []
+
+    for col, props in schema_dict.items():
+        sql_type = props["type"]
+        nullable = "" if props.get("nullable", True) else "NOT NULL"
+        columns.append(f"[{col}] {sql_type} {nullable}".strip())
+
+    cols_sql = ",\n    ".join(columns)
+
+    create_table = f"""
+        CREATE TABLE IF NOT EXISTS [{destination_table}] (\n    
+        {cols_sql}\n);
+        """
+
+    return create_table
+
+
+def generate_create_log_sql():
+    sql = """
+        CREATE TABLE IF NOT EXISTS [_ingest_log] (\n
+            ingest_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ingest_ts DATETIME NOT NULL,
+            data_collection TEXT NOT NULL,
+            table_name TEXT NOT NULL,
+            url TEXT,
+            success INTEGER
+            );
+    """
+    return sql
+
+
+def generate_select_sql(
+        from_table: str,
+        cols: list = None,
+        where: str = None,
+        distinct: bool = False
+):
+    """
+    Generate a basic SELECT statement with custom WHERE clause. Options available
+    to select distinct values and specify columns to include in the result set.
+    Args:
+        from_table: the source table
+        cols: list of columns to read. Default is "*" (all columns)
+        where: explicit WHERE clause. Supports logical operators in SQL style.
+        distinct: whether to return distinct values only. Default is False.
+
+    Returns:
+        the SQL query as a string
+
+    """
+    select_block = ", ".join(cols) if cols is not None else "*\n"
+    where_clause = f"WHERE \n\t{where}" if where is not None else ""
+    distinct_clause = "DISTINCT" if distinct else ""
+
+    query = f"""
+        SELECT {distinct_clause} 
+            {select_block}
+        FROM
+            {from_table}
+        {where_clause};
+    """
+
+    return query
