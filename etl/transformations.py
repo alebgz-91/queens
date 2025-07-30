@@ -1,7 +1,5 @@
-from IPython.testing.decorators import skip_if_no_x11
-
-from etl.input_output import read_and_wrangle_wb
-from utils import remove_note_tags
+from src.read_write import read_and_wrangle_wb
+from src.utils import remove_note_tags
 import pandas as pd
 from config.settings import DTYPES
 

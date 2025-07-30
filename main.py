@@ -1,7 +1,6 @@
 import typer
 from typing import Optional, List
 import logging
-import sys
 
 # enable logging
 logging.basicConfig(
@@ -14,7 +13,7 @@ logging.basicConfig(
 )
 
 from etl.process import *
-from etl.input_output import export_all, export_table
+from src.read_write import export_all, export_table
 from config.settings import EXPORT_PATH
 
 app = typer.Typer()
