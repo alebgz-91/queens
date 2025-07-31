@@ -1,9 +1,10 @@
 import sqlite3
 import pandas as pd
-import config.settings as stgs
+import config.settings as s
 import os
 import logging
 import datetime
+import src.utils as u
 
 
 def read_and_wrangle_wb(
@@ -21,7 +22,7 @@ def read_and_wrangle_wb(
 
     Args:
         file_path: `io` argument in read_excel
-        has_multi_headers: whether the table has a two-level column headings that starts on column B. If columb B has a single header, it will be ignored automatically.
+        has_multi_headers: whether the table has a two-level column headings that starts on column B. If column B has a single header, it will be ignored automatically.
         sheet_name: name of sheet to read
         skip_sheets: list of sheets to ignore when parsing the whole workbook.
 
@@ -117,7 +118,7 @@ def export_table(
             WHERE 
                 table_name = ?
         """
-        df = read_sql_as_frame(conn_path=stgs.DB_PATH,
+        df = read_sql_as_frame(conn_path=s.DB_PATH,
                                query=query,
                                query_params=(table_name,))
 
@@ -154,7 +155,7 @@ def export_all(
     """
     Export all table sin a given data_collection to flat files. Supports csv, parquet and Excel file types.
     Tables can either be saved as individual files (bulk = False, the default) or
-    as a sigle file (bulk = True). For bulk export to Excel, the individual tables are
+    as a single file (bulk = True). For bulk export to Excel, the individual tables are
     written to separate sheets of the same workbook.
     Args:
         data_collection: Name of the data collection
@@ -172,11 +173,11 @@ def export_all(
 
     try:
         if not bulk_export:
-            chapter_list = stgs.ETL_CONFIG[data_collection].keys()
+            chapter_list = s.ETL_CONFIG[data_collection].keys()
 
             for chapter in chapter_list:
                 logging.info(f"Saving tables from {data_collection}, {chapter}")
-                table_list = stgs.ETL_CONFIG[data_collection][chapter].keys()
+                table_list = s.ETL_CONFIG[data_collection][chapter].keys()
 
                 for table_key in table_list:
                     export_table(
@@ -193,7 +194,7 @@ def export_all(
         else:
             # export all tables in the data collection to a single file
             logging.info(f"Reading the {data_collection} production table.")
-            df = read_sql_as_frame(conn_path=stgs.DB_PATH,
+            df = read_sql_as_frame(conn_path=s.DB_PATH,
                                    query=f"SELECT * FROM {data_collection}_prod")
             file_name = f"{data_collection}_{output_ts}.{file_type}"
             output_path = os.path.join(output_path, file_name)
@@ -383,7 +384,7 @@ def read_sql_as_frame(
     placeholders (?).
 
     Args:
-        conn_path: connection string (path of db file
+        conn_path: connection string (path of db file)
         query: the SQL query as a string
         query_params: tuple of query parameters.
 
@@ -397,3 +398,86 @@ def read_sql_as_frame(
                                params=query_params)
 
     return df
+
+def table_exists(table_name: str, conn_path: str) -> bool:
+    """
+    Check if a table exists in the SQLite database.
+
+    Args:
+        table_name (str): Name of the table to check.
+        conn_path (str): Path to the SQLite database.
+
+    Returns:
+        bool: True if table exists, False otherwise.
+    """
+    try:
+        with sqlite3.connect(conn_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT name 
+                FROM sqlite_master 
+                WHERE type = 'table' 
+                    AND name = ?;
+            """, (table_name,))
+
+            result = cursor.fetchone()
+            return result is not None
+    except Exception as e:
+        logging.error(f"Error checking table existence: {e}")
+        return False
+
+
+def insert_metadata(
+        data_collection: str,
+        table_name: str,
+        conn_path: str
+):
+    """
+    Reads slice of _prod table and generates metadata for the slice
+    Args:
+        data_collection: name of data collection (shadows the table)
+        table_name: slice to select
+        conn_path: DB file path
+
+    Returns:
+        a pandas dataframe with metadata for table_name
+
+    """
+    from_table = data_collection + "_prod"
+    where = "table_name = ?"
+
+    query = u.generate_select_sql(from_table=from_table, where=where)
+    df = read_sql_as_frame(conn_path=conn_path, query=query, query_params=(table_name,))
+
+    df = df.dropna(axis=1, how="all")
+    df.drop(columns=["ingest_id", "ingest_ts"], inplace=True, errors="ignore")
+
+    df["data_collection"] = data_collection
+
+    metadata_df = pd.melt(
+        df.head(1),
+        id_vars=["data_collection", "table_name"],
+        var_name="column_name",
+        value_name="temp"
+    ).drop(columns="temp")
+
+    # column statistics
+    metadata_df["n_non_nulls"] = (metadata_df["column_name"]
+                                  .apply(lambda c: df[c].notna().sum()))
+    metadata_df["n_unique"] = (metadata_df["column_name"]
+                               .apply(lambda c: df[c].nunique()))
+    metadata_df["dtype"] = (metadata_df["column_name"]
+                            .apply(lambda c: str(df[c].dtype)))
+
+    # Write to DB
+    with sqlite3.connect(conn_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            DELETE FROM metadata
+            WHERE data_collection = ? AND table_name = ?;
+        """, (data_collection, table_name))
+
+        metadata_df.to_sql("metadata", conn, if_exists="append", index=False)
+
+    return metadata_df
+

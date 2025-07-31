@@ -1,5 +1,6 @@
 import json
 import inspect
+import os.path
 import re
 
 def parse_json(path: str):
@@ -47,6 +48,21 @@ def table_to_chapter(table_number, data_collection):
             # further logic to come
             raise NotImplemented("Work in process.")
 
+
+def check_path(file_path: str):
+    """
+    checks if a file path exists and throws an exception if not.
+    Args:
+        file_path: the path to check
+
+    Returns:
+        True if the path exists
+
+    """
+    abs_path = os.path.abspath(file_path)
+
+    if not os.path.exists(abs_path):
+        raise FileNotFoundError(f"The specified path does not exist: {file_path}")
 
 
 def check_inputs (data_collection: str,
@@ -171,6 +187,20 @@ def generate_create_log_sql():
             );
     """
     return sql
+
+
+def generate_create_metadata_sql():
+    query = """
+        CREATE TABLE IF NOT EXISTS [_metadata] (\n
+            data_collection     TEXT    NOT NULL,
+            table_name          TEXT    NOT NULL,
+            column_name         TEXT    NOT NULL,
+            n_not_nulls         INTEGER NOT NULL,
+            n_unique_values     INTEGER NOT NULL,
+            PRIMARY KEY (data_collection, table_name, column_name)
+        );            
+    """
+    return query
 
 
 def generate_select_sql(
