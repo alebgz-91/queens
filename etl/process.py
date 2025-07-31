@@ -1,4 +1,4 @@
-import etl.table_specs as ts
+import etl.validation as ts
 import src.read_write as rw
 import src.utils as u
 import etl.transformations as tr
@@ -31,21 +31,8 @@ def update_tables(
         ingest_ts = datetime.datetime.now().isoformat()
 
     try:
-        # create the raw table if it does not exist
-        logging.info("Creating table sql tables if not exist")
-        sql_create_main_tab = u.generate_create_table_sql(
-            table_prefix=data_collection,
-            table_env="raw",
-            schema_dict=s.SCHEMA
-        )
-
-        sql_create_log = u.generate_create_log_sql()
-
-        rw.execute_sql(
-            conn_path=s.DB_PATH,
-            sql=sql_create_log + "\n" + sql_create_main_tab
-        )
-
+        # this is run only after initialization so all tables exist
+        # and we can process data safely
         for table in table_list:
 
             u.check_inputs(data_collection=data_collection,
@@ -100,7 +87,7 @@ def update_tables(
 
     except Exception as e:
         logging.error(f"ETL tailed for {data_collection}: \n{e}")
-        return None
+        raise e
 
     logging.info(f"Finished ETL update for selected tables in {data_collection}")
     return None
@@ -131,8 +118,8 @@ def update_all_tables(data_collection: str):
                           ingest_ts=ingest_ts)
 
     except Exception as e:
-        logging.error(f"Batch update failed for {data_collection}: \n{e}")
-        return None
+        logging.error(f"Batch update failed for {data_collection}.")
+        raise e
 
     logging.info(f"All chapters processed for {data_collection}")
     return None
