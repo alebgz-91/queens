@@ -1,3 +1,5 @@
+from sympy.simplify.fu import as_f_sign_1
+
 import etl.validation as ts
 import src.read_write as rw
 import src.utils as u
@@ -139,9 +141,6 @@ def stage_data(
     Returns:
 
     """
-    # check if the data collection exists
-    if data_collection not in s.ETL_CONFIG:
-        raise NameError("No such data collection,")
 
     if as_of_date is not None:
         as_of_date = datetime.datetime.strptime(as_of_date, "%Y-%m-%d")
@@ -149,17 +148,98 @@ def stage_data(
         as_of_date = datetime.datetime.now().isoformat()
 
     try:
+        # check if the data collection exists
+        u.check_inputs(data_collection=data_collection,
+                       etl_config=s.ETL_CONFIG)
+
+        logging.info(f"Staging {data_collection} data.")
         rw.raw_to_prod(
             conn_path=s.DB_PATH,
             table_prefix=data_collection,
             cutoff=as_of_date
         )
+
+        logging.info("Updating metadata.")
+        for table_name in s.ETL_CONFIG[data_collection]:
+            m = rw.insert_metadata(
+                data_collection=data_collection,
+                table_name=table_name,
+                conn_path=s.DB_PATH
+            )
     except Exception as e:
         logging.error(f"Staging failed for {data_collection}: \n {e}")
+        raise e
+
+    date_str = "today" if as_of_date is None else as_of_date
+    logging.info(f"Data for {data_collection} successfully staged in prod. \nThis is a snapshot as of {date_str}")
+    return None
+
+
+def get_metadata(
+        data_collection: str,
+        table_name: str = None
+):
+    """
+    Display valid queryable columns for a given table_name or for all tables in the whole of data_collection
+
+    Args:
+        data_collection: name of the data collection
+        table_name: optional table name for table-specific results
+
+    Returns:
+        a pandas dataframe
+
+    """
+    if table_name:
+        where_clause = "data_collection = ? AND table_name = ?"
+        select_block = ["column_name"]
+        query_params = (data_collection, table_name)
+    else:
+        where_clause = "data_collection = ?"
+        select_block = ["table_name", "column_name"]
+        query_params = (data_collection,)
+
+    # get metadata
+    query = u.generate_select_sql(
+        from_table="metadata",
+        cols=select_block,
+        where=where_clause
+    )
+
+    df = rw.read_sql_as_frame(
+        conn_path=s.DB_PATH,
+        query=query,
+        query_params=query_params
+    )
+
+    # early return for empty dataframe
+    if df.empty:
+        print(f"No results for selected {data_collection}")
         return None
 
-    logging.info(f"Data for {data_collection} successfully staged in prod as of {as_of_date}")
-    return None
+    # two different outputs: simple list for table-specific results
+    # and full structured table for whole data collection
+    if table_name:
+        print(f"Queryable columns for {table_name}:")
+        for x in df["table_name"]:
+            print(x)
+        else:
+            # the output table will display a sign for columns that can be queried for each table
+            df["n"] = 1
+            df = df.rename(columns={
+                "column_name": "Column name"
+            })
+
+            # cross-tabulate
+            p = pd.pivot_table(
+                index="Column name",
+                columns="table_name",
+                values="n",
+                aggfunc= (lambda x: "X" if x.sum() is not None else "")
+            )
+
+            print(f"Results for {data_collection}:")
+            print(tabulate(df, headers="keys"))
 
 
 def get_data_info(
