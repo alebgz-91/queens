@@ -447,7 +447,15 @@ def insert_metadata(
     where = "table_name = ?"
 
     query = u.generate_select_sql(from_table=from_table, where=where)
-    df = read_sql_as_frame(conn_path=conn_path, query=query, query_params=(table_name,))
+    df = read_sql_as_frame(
+        conn_path=conn_path,
+        query=query,
+        query_params=(table_name,)
+    )
+
+    # early return for empty dataframe
+    if df.empty:
+        return pd.DataFrame()
 
     df = df.dropna(axis=1, how="all")
     df.drop(columns=["ingest_id", "ingest_ts"], inplace=True, errors="ignore")
