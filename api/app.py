@@ -1,11 +1,11 @@
 import fastapi as f
-from typing import Optional, Dict, Any
-import pandas as pd
+from typing import Optional
 import src.utils as u
+import json
 
+from etl.validation import validate_query_filters
 from src.read_write import read_sql_as_frame
 import config.settings as s
-
 
 app = f.FastAPI(title="UK Energy Data API")
 
@@ -34,8 +34,28 @@ def get_data(
     try:
         # verify existence of input
         u.check_inputs(data_collection=collection,
+                       table_name=table_name,
                        etl_config=s.ETL_CONFIG)
 
+        if filters:
+            # parse filters. Will raise a JSONException if format is invalid
+            filters = json.loads(filters)
+
+            # verify that the columns exist in the prod table
+            incorrect_cols = [c for c in filters if c not in s.SCHEMA[collection]]
+            if len(incorrect_cols) > 0:
+                raise NameError(f"Column(s) {', '.join(incorrect_cols)} are notni {collection}_prod")
+
+            # validate the filters
+            filters = validate_query_filters(
+                data_collection=collection,
+                table_name=table_name,
+                filters=filters,
+                conn_path=s.DB_PATH,
+                schema_dict=s.SCHEMA
+            )
+
+        # ready to get the data now
         from_table = f"{collection}_prod"
 
         where_clause = "table_name = ?"

@@ -1,7 +1,9 @@
 import pandas as pd
 from config.settings import DTYPES
 import src.web_scraping as ws
-
+import src.utils as u
+import src.read_write as rw
+from config.settings import DTYPES
 
 def generate_config(data_collection: str,
                     table_name: str,
@@ -101,3 +103,57 @@ def validate_schema(
             raise ValueError(f"Column {col_name} is not nullable but NULLs were found.")
 
     return df
+
+
+
+def validate_query_filters(
+        data_collection: str,
+        table_name: str,
+        filters: dict,
+        conn_path: str,
+        schema_dict: dict
+):
+    """
+    Check that keys in filters are queryable columns for table_name within data_collection and
+    cast each value to the correct data type
+
+    Args:
+        data_collection: name of parent data collection
+        table_name: number of table within data collection
+        filters: dictionary of filters. Keys are column names.
+        conn_path: the path of the DB file
+        schema_dict: schema dictionary of the database
+
+    Returns:
+        a dictionary of typed filters
+
+    """
+    # get metadata
+    query = u.generate_select_sql(
+        from_table="metadata",
+        cols=["column_name", "dtype"],
+        where="data_collection = ? AND table_name = ?"
+    )
+
+    metadata = rw.read_sql_as_frame(
+        conn_path=conn_path,
+        query=query,
+        query_params=(data_collection, table_name)
+    )
+
+    invalid_cols = [c for c in filters if c not in metadata["column_name"]]
+    if len(invalid_cols) != 0:
+        raise NameError(f"Column(s) {invalid_cols} cannot be queried in {table_name}.")
+
+    # cast to correct ty
+    try:
+        for key, val in filters.items():
+            sql_dtype = metadata.loc[metadata["column_name"] == key, "dtype"]
+            py_dtype = DTYPES[sql_dtype]
+            val = py_dtype(val)
+
+            filters.update({key: val})
+    except (TypeError, ValueError) as e:
+        raise TypeError(f"Cannot convert the value provided for {key} to {py_dtype}: {e} ")
+
+    return filters

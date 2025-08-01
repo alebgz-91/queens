@@ -1,5 +1,3 @@
-from sympy.simplify.fu import as_f_sign_1
-
 import etl.validation as ts
 import src.read_write as rw
 import src.utils as u
@@ -161,7 +159,7 @@ def stage_data(
 
         logging.info("Updating metadata.")
         for table_name in s.ETL_CONFIG[data_collection]:
-            m = rw.insert_metadata(
+            rw.insert_metadata(
                 data_collection=data_collection,
                 table_name=table_name,
                 conn_path=s.DB_PATH
@@ -177,7 +175,7 @@ def stage_data(
 
 def get_metadata(
         data_collection: str,
-        table_name: str = None
+        table_name: str = None,
 ):
     """
     Display valid queryable columns for a given table_name or for all tables in the whole of data_collection
@@ -192,11 +190,11 @@ def get_metadata(
     """
     if table_name:
         where_clause = "data_collection = ? AND table_name = ?"
-        select_block = ["column_name"]
+        select_block = ["column_name","dtype"]
         query_params = (data_collection, table_name)
     else:
         where_clause = "data_collection = ?"
-        select_block = ["table_name", "column_name"]
+        select_block = ["table_name", "column_name", "dtype"]
         query_params = (data_collection,)
 
     # get metadata
@@ -214,32 +212,40 @@ def get_metadata(
 
     # early return for empty dataframe
     if df.empty:
-        print(f"No results for selected {data_collection}")
-        return None
+        return pd.DataFrame
 
     # two different outputs: simple list for table-specific results
     # and full structured table for whole data collection
     if table_name:
-        print(f"Queryable columns for {table_name}:")
-        for x in df["table_name"]:
-            print(x)
-        else:
-            # the output table will display a sign for columns that can be queried for each table
-            df["n"] = 1
-            df = df.rename(columns={
-                "column_name": "Column name"
-            })
+        df.rename(columns={
+            "column_name": "Column name",
+            "dtype": "Data type"
+        }, inplace=True)
+    else:
+        # the output table will display a sign for columns that can be queried for each table
+        df["n"] = 1
+        df.rename(columns={
+            "column_name": "Column name",
+            "dtype": "Data type"
+        }, inplace=True)
 
-            # cross-tabulate
-            p = pd.pivot_table(
-                index="Column name",
-                columns="table_name",
-                values="n",
-                aggfunc= (lambda x: "X" if x.sum() is not None else "")
-            )
+        # cross-tabulate
+        p = pd.pivot_table(
+            index="Column name",
+            columns="table_name",
+            values="n",
+            aggfunc= (lambda x: "X" if x.sum() is not None else "")
+        )
 
-            print(f"Results for {data_collection}:")
-            print(tabulate(df, headers="keys"))
+        # append data type column
+        p.reset_index(drop=False)
+        p["Data type"] = p["Column name"].apply(
+            lambda x: s.DTYPES[s.SCHEMA[data_collection][x]["type"]]
+        )
+        p.set_index("Column name")
+
+    return df
+
 
 
 def get_data_info(
