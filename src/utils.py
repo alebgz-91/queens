@@ -192,11 +192,12 @@ def generate_create_log_sql():
 def generate_create_metadata_sql():
     query = """
         CREATE TABLE IF NOT EXISTS [_metadata] (\n
-            data_collection     TEXT    NOT NULL,
-            table_name          TEXT    NOT NULL,
-            column_name         TEXT    NOT NULL,
-            n_not_nulls         INTEGER NOT NULL,
-            n_unique_values     INTEGER NOT NULL,
+            [data_collection]     TEXT    NOT NULL,
+            [table_name]          TEXT    NOT NULL,
+            [column_name]         TEXT    NOT NULL,
+            [n_non_nulls]         INTEGER NOT NULL,
+        [n_unique]                INTEGER NOT NULL,
+            [dtype]               TEXT    NOT NULL,
             PRIMARY KEY (data_collection, table_name, column_name)
         );            
     """

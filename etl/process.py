@@ -6,6 +6,7 @@ import config.settings as s
 import logging
 import datetime
 import pandas as pd
+from numpy import isnan
 
 
 def ingest_tables(
@@ -156,12 +157,24 @@ def stage_data(
             cutoff=as_of_date
         )
 
+        # get the list of tables staged to prod. Note that the global table number
+        # may have been split into sheets (i.e. 1.3 -> 1.3.A, 1.3.B etc.
+        query = u.generate_select_sql(
+            from_table=f"{data_collection}_prod",
+            cols=["table_name"],
+            distinct=True
+        )
+
+        table_list = rw.read_sql_as_frame(conn_path=s.DB_PATH,
+                                          query=query)["table_name"]
+
         logging.info("Updating metadata.")
-        for table_name in s.ETL_CONFIG[data_collection]:
+        for table_name in table_list:
             rw.insert_metadata(
                 data_collection=data_collection,
                 table_name=table_name,
-                conn_path=s.DB_PATH
+                conn_path=s.DB_PATH,
+                schema_dict=s.SCHEMA
             )
     except Exception as e:
         logging.error(f"Staging failed for {data_collection}: \n {e}")
@@ -189,8 +202,7 @@ def get_metadata(
     """
     # check that data collection and table_name exist
     u.check_inputs(data_collection=data_collection,
-                   etl_config=s.ETL_CONFIG,
-                   table_name=table_name)
+                   etl_config=s.ETL_CONFIG)
 
     if table_name:
         where_clause = "data_collection = ? AND table_name = ?"
@@ -203,7 +215,7 @@ def get_metadata(
 
     # get metadata
     query = u.generate_select_sql(
-        from_table="metadata",
+        from_table="_metadata",
         cols=select_block,
         where=where_clause
     )
@@ -237,18 +249,19 @@ def get_metadata(
 
         # cross-tabulate
         p = pd.pivot_table(
+            data=df,
             index="Column name",
             columns="table_name",
             values="n",
-            aggfunc= (lambda x: "X" if x.sum() is not None else "")
+            aggfunc= (lambda x: "" if isnan(x.sum()) else "X"),
+            fill_value=""
         )
 
         # append data type column
-        p.reset_index(drop=False)
+        p.reset_index(drop=False, inplace=True)
         p["Data type"] = p["Column name"].apply(
-            lambda x: s.DTYPES[s.SCHEMA[data_collection][x]["type"]]
+            lambda x: s.SCHEMA[data_collection][x]["type"]
         )
-        p.set_index("Column name")
 
         return p
 
