@@ -38,7 +38,7 @@ def generate_config(data_collection: str,
     template_file_path = templates[data_collection][chapter_key]
 
     # add url, template_path and data_collection to f_args
-    config["f_args"].update({
+    config["f_args"].ingest({
         "url": url,
         "template_file_path": template_file_path,
         "data_collection": data_collection

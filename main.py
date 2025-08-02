@@ -1,6 +1,7 @@
 import typer
 from typing import Optional, List
 import logging
+from src.read_write import table_exists
 
 # enable logging
 logging.basicConfig(
@@ -60,7 +61,7 @@ def config(
     try:
         updated = False
         if db_path:
-            s.config_ini["DATABSE"]["db_path"] = db_path
+            s.config_ini["DATABASE"]["db_path"] = db_path
             updated = True
         if export_path:
             u.check_path(export_path)
@@ -78,7 +79,7 @@ def config(
 
 
 @app.command()
-def update(
+def ingest(
     collection: str,
     tables: Optional[List[str]] = typer.Option(None, "--table", "-t", help="Table(s) to update")
 ):
@@ -88,12 +89,12 @@ def update(
     try:
         if tables:
             typer.echo(f"Updating {tables} in {collection}...")
-            update_tables(
+            ingest_tables(
                 data_collection=collection,
                 table_list=tables)
         else:
             typer.echo(f"Updating all tables in {collection}...")
-            update_all_tables(data_collection=collection)
+            ingest_all_tables(data_collection=collection)
     except Exception as e:
         typer.echo(f"ERROR - execution terminated: {e}")
 
@@ -113,17 +114,38 @@ def stage(
 @app.command()
 def info(
     collection: str,
-    table: Optional[str] = typer.Option(None, "--table", "-t", help="Optional table name to inspect")
+    table: Optional[str] = typer.Option(None, "--table", "-t", help="Optional table name to inspect"),
+    vers: Optional[bool] = typer.Option(False, "--vers", "-v", help="Displays the ingested versions for the specified selection."),
+    meta: Optional[bool] = typer.Option(False, "--meta", "-m", help="Displays queryable column names and data types for each table in the selection.")
 ):
-    get_data_info(data_collection=collection,
-                  table_name=str(table))
+    """
+    Displays information on data according to the selected parameters, The defauls behaviour is to
+    display table statistics for staged data. It can also display a list of ingested versions and schema information.
+    Args:
+        collection: data collection name
+        table: table name
+        vers: whether to display the data version log
+        meta: whether to display column metadata
 
-@app.command()
-def versions(
-        collection: str,
-        table: Optional[str] = typer.Option(None, "--table", "-t", help="Optional table name to inspect")
-):
-    get_data_versions(data_collection=collection, table_name=table)
+    Returns:
+        None
+
+    """
+    if vers:
+        df = get_data_versions(data_collection=collection, table_name=table)
+
+
+    elif meta:
+        df = get_metadata(data_collection=collection, table_name=table)
+    else:
+        df = get_data_info(data_collection=collection, table_name=table)
+
+    conditional_str = f", table {table}" if table else ""
+    if df.empty:
+        typer.echo(f"No results found for {collection}{conditional_str}.")
+    else:
+        typer.echo(f"Found {len(df)} result(s) for {collection}{conditional_str}:")
+        typer.echo(tabulate(df, headers="keys"))
 
 
 @app.command()
