@@ -1,4 +1,6 @@
 import pandas as pd
+from dask.array import invert
+
 from config.settings import DTYPES
 import src.web_scraping as ws
 import src.utils as u
@@ -128,6 +130,11 @@ def validate_query_filters(
         a dictionary of typed filters
 
     """
+    # check taht filters exist as columns in the data_collection prod table
+    invalid_cols = {c for c in filters if c not in schema_dict[data_collection]}
+    if len(invalid_cols) > 0:
+        raise KeyError(f"No such column(s) in {data_collection}_prod table: {[invalid_cols]}")
+
     # get metadata
     query = u.generate_select_sql(
         from_table="metadata",
@@ -148,7 +155,7 @@ def validate_query_filters(
     # cast to correct ty
     try:
         for key, val in filters.items():
-            sql_dtype = metadata.loc[metadata["column_name"] == key, "dtype"]
+            sql_dtype = schema_dict[data_collection][key]["type"]
             py_dtype = DTYPES[sql_dtype]
             val = py_dtype(val)
 
