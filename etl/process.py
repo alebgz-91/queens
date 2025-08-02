@@ -9,7 +9,7 @@ import pandas as pd
 from tabulate import tabulate
 
 
-def update_tables(
+def ingest_tables(
         data_collection: str,
         table_list: list,
         ingest_ts: str = None
@@ -93,7 +93,7 @@ def update_tables(
     return None
 
 
-def update_all_tables(data_collection: str):
+def ingest_all_tables(data_collection: str):
 
     try:
         # verify that the data collection exists
@@ -113,7 +113,7 @@ def update_all_tables(data_collection: str):
             # execute
             table_list = config[chapter_key].keys()
 
-            update_tables(data_collection=data_collection,
+            ingest_tables(data_collection=data_collection,
                           table_list=table_list,
                           ingest_ts=ingest_ts)
 
@@ -178,7 +178,7 @@ def get_metadata(
         table_name: str = None,
 ):
     """
-    Display valid queryable columns for a given table_name or for all tables in the whole of data_collection
+    Fetch queryable columns for a given table_name or for all tables in the whole of data_collection
 
     Args:
         data_collection: name of the data collection
@@ -188,6 +188,11 @@ def get_metadata(
         a pandas dataframe
 
     """
+    # check that data collection and table_name exist
+    u.check_inputs(data_collection=data_collection,
+                   etl_config=s.ETL_CONFIG,
+                   table_name=table_name)
+
     if table_name:
         where_clause = "data_collection = ? AND table_name = ?"
         select_block = ["column_name","dtype"]
@@ -221,6 +226,8 @@ def get_metadata(
             "column_name": "Column name",
             "dtype": "Data type"
         }, inplace=True)
+        return df
+
     else:
         # the output table will display a sign for columns that can be queried for each table
         df["n"] = 1
@@ -244,7 +251,7 @@ def get_metadata(
         )
         p.set_index("Column name")
 
-    return df
+        return p
 
 
 
@@ -263,7 +270,7 @@ def get_data_info(
     Returns:
         pd.DataFrame: A summary dataframe of ingested data, or an empty dataframe if none found.
     """
-    if table_name is not None:
+    if table_name:
         where_clause = f"table_name = ?"
         query_params = (table_name,)
     else:
@@ -272,8 +279,7 @@ def get_data_info(
 
     query = u.generate_select_sql(
         from_table=f"{data_collection}_prod",
-        where=where_clause,
-        distinct=True
+        where=where_clause
     )
 
     df = rw.read_sql_as_frame(
@@ -282,9 +288,8 @@ def get_data_info(
         query_params=query_params
     )
 
+    # early return for empty result set
     if df.empty:
-        print(f"No data staged for '{data_collection}'"
-              f"{f', table {table_name}' if table_name else ''}.")
         return pd.DataFrame()
 
     df["ingest_ts"] = pd.to_datetime(df["ingest_ts"])
@@ -297,10 +302,6 @@ def get_data_info(
         ("Max. year", "max"),
         ("Row count", "count")
     ]).reset_index().set_index("Table number")
-
-    print(f"Found {len(df)} record(s) for '{data_collection}'"
-          f"{f', table {table_name}' if table_name else ''}.\n")
-    print(tabulate(df, headers="keys"))
 
     return df
 
@@ -320,14 +321,16 @@ def get_data_versions(
         pd.DataFrame: A dataframe listing all ingested versions with timestamps.
     """
 
-    if table_name is None:
-        where_clause = "data_collection = ? AND success = 1"
-        query_params = (data_collection, )
-        print_str = data_collection
-    else:
+    if table_name:
         where_clause = "data_collection = ? AND table_name = ? AND success = 1"
         query_params = (data_collection, table_name)
         print_str = f"{data_collection} table {table_name}"
+
+    else:
+        where_clause = "data_collection = ? AND success = 1"
+        query_params = (data_collection,)
+        print_str = data_collection
+
 
     select_block = ["table_name", "ingest_ts"]
 
@@ -343,7 +346,6 @@ def get_data_versions(
                               query_params=query_params)
 
     if df.empty:
-        print(f"No ingested versions found for {print_str}.")
         return pd.DataFrame()
 
     # reshape dataframe into human-readable form
@@ -361,8 +363,5 @@ def get_data_versions(
     df["Ingest date"] = df["ingest_ts"].dt.date
     df["Ingest time"] = df["ingest_ts"].dt.time
     df.drop(columns=["ingest_ts"], inplace=True)
-
-    print(f"Found {len(df)} ingested version(s) for {print_str}:\n")
-    print(tabulate(df, headers="keys"))
 
     return df
