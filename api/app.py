@@ -37,14 +37,16 @@ def get_data(
                        table_name=table_name,
                        etl_config=s.ETL_CONFIG)
 
+        # ready to get the data now
+        from_table = f"{collection}_prod"
+        where_clause = "table_name = ?"
+        query_params = (table_name,)
+
+        # if there are filters, they need to be validated
+        # and an appropriate query must be generated
         if filters:
             # parse filters. Will raise a JSONException if format is invalid
             filters = json.loads(filters)
-
-            # verify that the columns exist in the prod table
-            incorrect_cols = [c for c in filters if c not in s.SCHEMA[collection]]
-            if len(incorrect_cols) > 0:
-                raise NameError(f"Column(s) {', '.join(incorrect_cols)} are notni {collection}_prod")
 
             # validate the filters
             filters = validate_query_filters(
@@ -55,13 +57,6 @@ def get_data(
                 schema_dict=s.SCHEMA
             )
 
-        # ready to get the data now
-        from_table = f"{collection}_prod"
-
-        where_clause = "table_name = ?"
-        query_params = (table_name,)
-
-        if filters:
             for k, val in filters.items():
                 where_clause += f" AND {k} = ?"
                 query_params = query_params + (val,)
@@ -79,6 +74,10 @@ def get_data(
 
         # remove unused columns
         df.dropna(axis=1, how="all", inplace=True)
+
+        # remove ingest_id from columns as it is not needed
+        df.drop(columns=["ingest_id"], inplace=True)
+
     except Exception as e:
         raise f.HTTPException(status_code=500, detail=str(e))
 
