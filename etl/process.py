@@ -6,7 +6,6 @@ import config.settings as s
 import logging
 import datetime
 import pandas as pd
-from tabulate import tabulate
 
 
 def ingest_tables(
@@ -324,13 +323,10 @@ def get_data_versions(
     if table_name:
         where_clause = "data_collection = ? AND table_name = ? AND success = 1"
         query_params = (data_collection, table_name)
-        print_str = f"{data_collection} table {table_name}"
 
     else:
         where_clause = "data_collection = ? AND success = 1"
         query_params = (data_collection,)
-        print_str = data_collection
-
 
     select_block = ["table_name", "ingest_ts"]
 
