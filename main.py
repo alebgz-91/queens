@@ -1,7 +1,7 @@
 import typer
 from typing import Optional, List
 import logging
-from src.read_write import table_exists
+from tabulate import tabulate
 
 # enable logging
 logging.basicConfig(
@@ -25,7 +25,9 @@ def auto_startup(c: typer.Context):
     """
     Initialises the ETL pipeline with default config.
     """
-    commands_requiring_init = {"update"}
+    commands_requiring_init = {"ingest",
+                               "stage",
+                               "export"}
 
     # list of necessary tables in DB
     if c.invoked_subcommand in commands_requiring_init:
@@ -107,8 +109,12 @@ def stage(
     """
     Stage the most recent data version for a collection.
     """
-    typer.echo(f"Staging {collection} data...")
-    stage_data(data_collection=collection, as_of_date=as_of_date)
+    try:
+        typer.echo(f"Staging {collection} data...")
+        stage_data(data_collection=collection,
+                   as_of_date=as_of_date)
+    except Exception as e:
+        typer.echo(f"An error occurred when staging data: \n{e}")
 
 
 @app.command()
@@ -131,21 +137,40 @@ def info(
         None
 
     """
-    if vers:
-        df = get_data_versions(data_collection=collection, table_name=table)
+    try:
+        if vers:
+            df = get_data_versions(data_collection=collection, table_name=table)
 
 
-    elif meta:
-        df = get_metadata(data_collection=collection, table_name=table)
-    else:
-        df = get_data_info(data_collection=collection, table_name=table)
+        elif meta:
+            df = get_metadata(data_collection=collection, table_name=table)
+        else:
+            df = get_data_info(data_collection=collection, table_name=table)
 
-    conditional_str = f", table {table}" if table else ""
-    if df.empty:
-        typer.echo(f"No results found for {collection}{conditional_str}.")
-    else:
-        typer.echo(f"Found {len(df)} result(s) for {collection}{conditional_str}:")
-        typer.echo(tabulate(df, headers="keys"))
+        conditional_str = f", table {table}" if table else ""
+        if df.empty:
+            typer.echo(f"No results found for {collection}{conditional_str}.")
+            raise typer.Exit()
+        else:
+            typer.echo(f"Found {len(df)} result(s) for {collection}{conditional_str}:")
+            df.set_index(df.columns[0], inplace=True)
+
+            # for this table, break the result in chunks for readability
+            if meta and (table is None):
+                dtype_col = df["Data type"]
+                df.drop(columns=["Data type"], inplace=True)
+
+                for i in range(0, len(df.columns), 8):
+                    chunk = df.iloc[:, i:(i + 8)]
+                    chunk = pd.concat([chunk, dtype_col], axis=1)
+
+                    typer.echo(tabulate(chunk, headers="keys"))
+                    typer.echo("\n")
+            else:
+                typer.echo(tabulate(df, headers="keys"))
+
+    except Exception as e:
+        typer.echo(f"An error has occurred: \n{e}")
 
 
 @app.command()
@@ -156,23 +181,26 @@ def export(
         path: Optional[str] = typer.Option(s.EXPORT_PATH, "--path", "-p", help="Optional destination path"),
         bulk: Optional[bool] = typer.Option(False, "--bulk", "-b", help="Whether to save all the data in a single file or not")
 ):
-    if table:
-        typer.echo(f"Exporting {collection} table {table}...")
-        rw.export_table(
-            data_collection=collection,
-            file_type=file_type,
-            output_path=path,
-            table_name=table
-        )
-    else:
-        bulk_str = " as a single file" if bulk else ""
-        typer.echo(f"Exporting all tables in {collection}{bulk_str}---")
-        rw.export_all(
-            data_collection=collection,
-            file_type=file_type,
-            output_path=path,
-            bulk_export=bulk
-        )
+    try:
+        if table:
+            typer.echo(f"Exporting {collection} table {table}...")
+            rw.export_table(
+                data_collection=collection,
+                file_type=file_type,
+                output_path=path,
+                table_name=table
+            )
+        else:
+            bulk_str = " as a single file" if bulk else ""
+            typer.echo(f"Exporting all tables in {collection}{bulk_str}---")
+            rw.export_all(
+                data_collection=collection,
+                file_type=file_type,
+                output_path=path,
+                bulk_export=bulk
+            )
+    except Exception as e:
+        typer.echo(f"An error has occurred when exporting data: \n{e}")
 
 
 

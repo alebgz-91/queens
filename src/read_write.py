@@ -1,5 +1,7 @@
 import sqlite3
 import pandas as pd
+from pyodbc import IntegrityError
+
 import config.settings as s
 import os
 import logging
@@ -430,7 +432,8 @@ def table_exists(table_name: str, conn_path: str) -> bool:
 def insert_metadata(
         data_collection: str,
         table_name: str,
-        conn_path: str
+        conn_path: str,
+        schema_dict: dict
 ):
     """
     Reads slice of _prod table and generates metadata for the slice
@@ -455,7 +458,7 @@ def insert_metadata(
 
     # early return for empty dataframe
     if df.empty:
-        return pd.DataFrame()
+        raise IntegrityError(f"No data found for {data_collection}, {table_name}. \nAn error has occurred when staging the data.")
 
     df = df.dropna(axis=1, how="all")
     df.drop(columns=["ingest_id", "ingest_ts"], inplace=True, errors="ignore")
@@ -475,17 +478,17 @@ def insert_metadata(
     metadata_df["n_unique"] = (metadata_df["column_name"]
                                .apply(lambda c: df[c].nunique()))
     metadata_df["dtype"] = (metadata_df["column_name"]
-                            .apply(lambda c: str(df[c].dtype)))
+                            .apply(lambda c: schema_dict[data_collection][c]["type"]))
 
     # Write to DB
     with sqlite3.connect(conn_path) as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            DELETE FROM metadata
+            DELETE FROM _metadata
             WHERE data_collection = ? AND table_name = ?;
         """, (data_collection, table_name))
 
-        metadata_df.to_sql("metadata", conn, if_exists="append", index=False)
+        metadata_df.to_sql("_metadata", conn, if_exists="append", index=False)
 
     return metadata_df
 
