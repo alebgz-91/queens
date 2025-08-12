@@ -137,7 +137,7 @@ def validate_query_filters(
 
     # get metadata
     query = u.generate_select_sql(
-        from_table="metadata",
+        from_table="_metadata",
         cols=["column_name", "dtype"],
         where="data_collection = ? AND table_name = ?"
     )
@@ -148,7 +148,7 @@ def validate_query_filters(
         query_params=(data_collection, table_name)
     )
 
-    invalid_cols = [c for c in filters if c not in metadata["column_name"]]
+    invalid_cols = [c for c in filters if c not in metadata["column_name"].values]
     if len(invalid_cols) != 0:
         raise NameError(f"Column(s) {invalid_cols} cannot be queried in {table_name}.")
 

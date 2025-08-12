@@ -71,12 +71,11 @@ def get_data(
             query=query,
             query_params=query_params
         )
+        # remove ingest_id from columns as it is not needed
+        df.drop(columns=["ingest_id", "ingest_ts"], inplace=True)
 
         # remove unused columns
         df.dropna(axis=1, how="all", inplace=True)
-
-        # remove ingest_id from columns as it is not needed
-        df.drop(columns=["ingest_id"], inplace=True)
 
     except Exception as e:
         raise f.HTTPException(status_code=500, detail=str(e))
