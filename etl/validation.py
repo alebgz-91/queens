@@ -174,7 +174,12 @@ def validate_query_filters(
 
         # validate the operators for each condition
     for col, ops in group.items():
-        allowed = VALID_OPS[col]
+        sql_t = sql_types[col]
+        allowed = VALID_OPS.get(sql_t)
+        # adding this to facilitate debug
+        if not allowed:
+            raise ValueError(f"No operator policy for SQL type '{sql_t}' (column '{col}').")
+
         caster = cast_map[col]
 
         for op, val in list(ops.items()):

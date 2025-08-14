@@ -259,7 +259,9 @@ def to_nested(d: dict):
 
 def build_sql_for_group(
         group: dict,
-        operator_map: dict):
+        operator_map: dict,
+        schema_dict: dict
+):
     """
     group: {col: {op: value, ...}, ...}
     Combine operatos for a field with AND; combine fields with AND.
@@ -270,7 +272,10 @@ def build_sql_for_group(
 
     for col, ops in group.items():
         for op, val in ops.items():
-            clauses.append(f"{col} {operator_map[op]}")
+            clause = f"{col} {operator_map[op]}"
+            if schema_dict[col]["type"] == "TEXT":
+                clause = clause.replace("?", "? COLLATE NOCASE")
+            clauses.append(clause)
             params.append(val)
 
     return " AND ".join(clauses) if clauses else "1=1", params
@@ -279,12 +284,15 @@ def build_sql_for_group(
 def build_where_clause(
         base_group: dict,
         or_groups: list[dict],
-        operator_map: dict
+        operator_map: dict,
+        schema_dict: dict
 ):
     """
     (base AND) AND ( OR-group )  ; OR-group is OR of group SQLs
     """
-    base_sql, base_params = build_sql_for_group(base_group, operator_map)
+    base_sql, base_params = build_sql_for_group(base_group,
+                                                operator_map,
+                                                schema_dict)
 
     # early return if no ORs are provided
     if not or_groups:
@@ -293,7 +301,9 @@ def build_where_clause(
     or_sqls = []
     or_params = []
     for g in or_groups:
-        s, p = build_sql_for_group(g, operator_map)
+        s, p = build_sql_for_group(g,
+                                   operator_map,
+                                   schema_dict)
         or_sqls.append(f"({s})")
         or_params.extend(p)
 
