@@ -68,8 +68,14 @@ def get_data(
     # build WHERE
     base["table_name"] = {"eq": table_name}  # ensure mandatory filter
     try:
-        where_sql, query_params = u.build_where_clause(base, ors, s.OP_SQL)
-    except Exceètopm as e:
+        schema_dict = s.SCHEMA[collection]
+        where_sql, query_params = u.build_where_clause(
+            base,
+            ors,
+            s.OP_SQL,
+            schema_dict
+        )
+    except Exception as e:
         raise f.HTTPException(status_code=422, detail=str(e))
 
     # final query
