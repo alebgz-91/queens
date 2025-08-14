@@ -255,3 +255,44 @@ def to_nested(d: dict):
         nested[k] = v if isinstance(v, dict) else {"eq": v}
 
     return nested
+
+
+def build_sql_for_group(
+        group: dict,
+        operator_map: dict):
+    """
+    group: {col: {op: value, ...}, ...}
+    Combine operatos for a field with AND; combine fields with AND.
+    """
+
+    clauses = []
+    params = []
+
+    for col, ops in group.items():
+        for op, val in ops.items():
+            clauses.append(f"{col} {operator_map[op]}")
+            params.append(val)
+
+    return " AND ".join(clauses) if clauses else "1=1", params
+
+
+def build_where_clause(base_group: dict, or_groups: list[dict]):
+    """
+    (base AND) AND ( OR-group )  ; OR-group is OR of group SQLs
+    """
+    base_sql, base_params = build_sql_for_group(base_group)
+
+    # early return if no ORs are provided
+    if not or_groups:
+        return base_sql, base_params
+
+    or_sqls = []
+    or_params = []
+    for g in or_groups:
+        s, p = build_sql_for_group(g)
+        or_sqls.append(f"({s})")
+        or_params.extend(p)
+
+    where_sql = f"({base_sql}) AND (" + " OR ".join(or_sqls) + ")"
+    params = base_params + or_params
+    return where_sql, tuple(params)
