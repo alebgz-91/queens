@@ -27,5 +27,22 @@ DTYPES = {
     "DATETIME": None
 }
 
+
+# valid query binary operators for each type of data
+VALID_OPS = {
+    "INTEGER": {"eq","neq","lt","lte","gt","gte"},
+"   "REAL": {"eq","neq","lt","lte","gt","gte"},
+    "TEXT":  {"eq","neq","like"}
+}
+
+# operators mapped to SQL operators
+OP_SQL = {
+        "eq":  "= ?",   "neq": "<> ?",
+        "lt":  "< ?",   "lte": "<= ?",
+        "gt":  "> ?",   "gte": ">= ?",
+        "like":"LIKE ?"
+    }
+
+
 # schema for DB tables
 SCHEMA = parse_json("config/schema.json")

@@ -441,6 +441,7 @@ def insert_metadata(
         data_collection: name of data collection (shadows the table)
         table_name: slice to select
         conn_path: DB file path
+        schema_dict: dictionary that defines the schema of the parent table
 
     Returns:
         a pandas dataframe with metadata for table_name
@@ -492,3 +493,33 @@ def insert_metadata(
 
     return metadata_df
 
+
+def load_column_info(
+        conn_path: str,
+        data_collection: str,
+        table_name: str):
+
+    # expects metadata table with columns: column_name, dtype
+    query = u.generate_select_sql(
+        from_table="_metadata",
+        cols=["column_name", "dtype"],
+        where="data_collection = ? AND table_name = ?"
+    )
+    meta = read_sql_as_frame(
+        conn_path,
+        query,
+        query_params=(data_collection, table_name)
+    )
+
+    if meta.empty:
+        raise ValueError(f"No metadata for {data_collection} {table_name}")
+
+    # build maps
+    sql_types = {r["column_name"]: r["dtype"] for _, r in meta.iterrows()}
+
+    cast = {}
+    for col, sql_t in sql_types.items():
+        py = s.DTYPES[sql_t]
+        cast[col] = py
+
+    return sql_types, cast
