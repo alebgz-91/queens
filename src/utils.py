@@ -236,3 +236,22 @@ def generate_select_sql(
     """
 
     return query
+
+def to_nested(d: dict):
+    """
+    Converts a dictionary in flat format {k : v,...} to a nested disct of the form {k : {"eq" : v}}
+    Also maintains existing nesting (i.e. {k : {op: v}} is left untouched.
+
+    Args:
+        d: input dictionary
+
+    Returns:
+        the transformed dictionary
+
+    """
+
+    nested = {}
+    for k, v in d.items():
+        nested[k] = v if isinstance(v, dict) else {"eq": v}
+
+    return nested
