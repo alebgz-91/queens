@@ -108,6 +108,33 @@ def validate_schema(
 
 
 
+def normalize_filters(filters: dict):
+    """
+    Split into a base AND dict (nested operators) and a list of OR-groups.
+    - Base part: dict of fields (each field is nested op dict)
+    - OR part: list of dicts (each dict same structure as base)
+    """
+    filters = filters or {}
+    or_groups = []
+
+    # extract and normalise $or
+    if "$or" in filters:
+        raw_or = filters.pop("$or")
+        if isinstance(raw_or, dict):
+            # tolerate dict by converting to list of single-field dicts
+            or_groups = [{k: v} for k, v in raw_or.items()]
+        elif isinstance(raw_or, list):
+            or_groups = raw_or
+        else:
+            raise ValueError("`$or` must be a list of filter objects or a dict.")
+
+        base = u.to_nested(filters)
+        or_groups = [to_nested(g) for g in or_groups]
+
+        return base, or_groups
+
+
+
 def validate_query_filters(
         data_collection: str,
         table_name: str,
