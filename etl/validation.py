@@ -1,11 +1,8 @@
 import pandas as pd
-from dask.array import invert
-
-from config.settings import DTYPES
+from config.settings import DTYPES, VALID_OPS
 import src.web_scraping as ws
 import src.utils as u
 import src.read_write as rw
-from config.settings import DTYPES
 
 def generate_config(data_collection: str,
                     table_name: str,
@@ -120,36 +117,42 @@ def normalize_filters(filters: dict):
     # extract and normalise $or
     if "$or" in filters:
         raw_or = filters.pop("$or")
+
         if isinstance(raw_or, dict):
             # tolerate dict by converting to list of single-field dicts
             or_groups = [{k: v} for k, v in raw_or.items()]
+
         elif isinstance(raw_or, list):
             or_groups = raw_or
+
         else:
             raise ValueError("`$or` must be a list of filter objects or a dict.")
 
-        base = u.to_nested(filters)
-        or_groups = [to_nested(g) for g in or_groups]
+    base = u.to_nested(filters)
+    or_groups = [u.to_nested(g) for g in or_groups]
 
-        return base, or_groups
+    return base, or_groups
 
 
 
 def validate_query_filters(
         data_collection: str,
         table_name: str,
-        filters: dict,
+        group: dict,
         conn_path: str,
         schema_dict: dict
 ):
     """
-    Check that keys in filters are queryable columns for table_name within data_collection and
-    cast each value to the correct data type
+     - ensures columns exist in schema_dict[data_collection]
+    - ensures columns are queryable for this table_name (metadata)
+    - validates ops per type
+    - casts values to the column dtype
+    Returns same shape with casted values.
 
     Args:
         data_collection: name of parent data collection
         table_name: number of table within data collection
-        filters: dictionary of filters. Keys are column names.
+        group: dictionary of filters. grouped by logical operator and in nested format
         conn_path: the path of the DB file
         schema_dict: schema dictionary of the database
 
@@ -158,36 +161,35 @@ def validate_query_filters(
 
     """
     # check taht filters exist as columns in the data_collection prod table
-    invalid_cols = {c for c in filters if c not in schema_dict[data_collection]}
-    if len(invalid_cols) > 0:
+    invalid_cols = {c for c in group if c not in schema_dict[data_collection]}
+    if invalid_cols:
         raise KeyError(f"No such column(s) in {data_collection}_prod table: {[invalid_cols]}")
 
-    # get metadata
-    query = u.generate_select_sql(
-        from_table="_metadata",
-        cols=["column_name", "dtype"],
-        where="data_collection = ? AND table_name = ?"
-    )
+    # get columns metadata
+    sql_types, cast_map = rw.load_column_info(conn_path, data_collection, table_name)
 
-    metadata = rw.read_sql_as_frame(
-        conn_path=conn_path,
-        query=query,
-        query_params=(data_collection, table_name)
-    )
-
-    invalid_cols = [c for c in filters if c not in metadata["column_name"].values]
-    if len(invalid_cols) != 0:
+    invalid_cols = [c for c in group if c not in sql_types]
+    if invalid_cols:
         raise NameError(f"Column(s) {invalid_cols} cannot be queried in {table_name}.")
 
-    # cast to correct ty
-    try:
-        for key, val in filters.items():
-            sql_dtype = schema_dict[data_collection][key]["type"]
-            py_dtype = DTYPES[sql_dtype]
-            val = py_dtype(val)
+        # validate the operators for each condition
+    for col, ops in group.items():
+        allowed = VALID_OPS[col]
+        caster = cast_map[col]
 
-            filters.update({key: val})
-    except (TypeError, ValueError) as e:
-        raise TypeError(f"Cannot convert the value provided for {key} to {py_dtype}: {e} ")
+        for op, val in list(ops.items()):
+            if op not in allowed:
+                raise ValueError(f"Operator '{op}' not allowed for {sql_types[col]} column '{col}'.")
 
-    return filters
+            try:
+                if op in {"eq", "neq", "lt", "lte", "gt", "gte"}:
+                    # numeric or string eq/neq; cast numerics
+                    ops[op] = caster(val)
+                elif op == "like":
+                    if not isinstance(val, str):
+                        raise TypeError("LIKE expects a string pattern")
+                    ops[op] = val
+            except (TypeError, ValueError) as e:
+                raise TypeError(f"Cannot cast value for '{col}' ({op}): {e}")
+
+    return group

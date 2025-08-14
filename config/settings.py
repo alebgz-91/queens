@@ -31,7 +31,7 @@ DTYPES = {
 # valid query binary operators for each type of data
 VALID_OPS = {
     "INTEGER": {"eq","neq","lt","lte","gt","gte"},
-"   "REAL": {"eq","neq","lt","lte","gt","gte"},
+    "REAL": {"eq","neq","lt","lte","gt","gte"},
     "TEXT":  {"eq","neq","like"}
 }
 

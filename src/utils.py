@@ -78,7 +78,7 @@ def check_inputs (data_collection: str,
     Returns:
         True if data_collection and table_name are found
     Raises:
-        ValueError if either data_collection or table_key are not found
+        NameError if either data_collection or table_key are not found
 
     """
     if data_collection not in etl_config:
@@ -276,11 +276,15 @@ def build_sql_for_group(
     return " AND ".join(clauses) if clauses else "1=1", params
 
 
-def build_where_clause(base_group: dict, or_groups: list[dict]):
+def build_where_clause(
+        base_group: dict,
+        or_groups: list[dict],
+        operator_map: dict
+):
     """
     (base AND) AND ( OR-group )  ; OR-group is OR of group SQLs
     """
-    base_sql, base_params = build_sql_for_group(base_group)
+    base_sql, base_params = build_sql_for_group(base_group, operator_map)
 
     # early return if no ORs are provided
     if not or_groups:
@@ -289,7 +293,7 @@ def build_where_clause(base_group: dict, or_groups: list[dict]):
     or_sqls = []
     or_params = []
     for g in or_groups:
-        s, p = build_sql_for_group(g)
+        s, p = build_sql_for_group(g, operator_map)
         or_sqls.append(f"({s})")
         or_params.extend(p)
 
