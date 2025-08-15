@@ -2,6 +2,10 @@
   "dukes": {
     "chapter_1": "https://www.gov.uk/government/statistics/energy-chapter-1-digest-of-united-kingdom-energy-statistics-dukes",
     "chapter_2": "https://www.gov.uk/government/statistics/solid-fuels-and-derived-gases-chapter-2-digest-of-united-kingdom-energy-statistics-dukes",
-    "chapter_3": "https://www.gov.uk/government/statistics/petroleum-chapter-3-digest-of-united-kingdom-energy-statistics-dukes"
+    "chapter_3": "https://www.gov.uk/government/statistics/petroleum-chapter-3-digest-of-united-kingdom-energy-statistics-dukes",
+    "chapter_4": "https://www.gov.uk/government/statistics/natural-gas-chapter-4-digest-of-united-kingdom-energy-statistics-dukes",
+    "chapter_5": "",
+    "chapter_6": "",
+    "chapter_7": ""
   }
 }

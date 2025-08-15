@@ -237,6 +237,26 @@
                     "sheet_names": ["F.4"]
                 }
             }
+        },
+        "chapter_4": {
+            "4.1": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "sheet_names": ["4.1"]
+                }
+            },
+            "4.2": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "sheet_names": ["4.2"]
+                }
+            },
+            "4.3": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "sheet_names": ["4.3"]
+                }
+            }
         }
 
     }
