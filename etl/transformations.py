@@ -188,6 +188,7 @@ def process_multi_sheets_to_frame(
         var_on_cols: str = "fuel",
         has_multi_headers: bool = False,
         skip_sheets: list = None,
+        transpose_first: bool,
         ignore_mapping: bool = False,
         id_var_position: int = None,
         id_var_name: str = None,
@@ -207,6 +208,7 @@ def process_multi_sheets_to_frame(
         var_on_cols: name of the column headings variable (default is fuel)
         var_on_sheets: name of the variable on sheet names (default is year)
         skip_sheets: list of sheets to discard
+        transpose_first: if True, every sheet is transposed before applying the mapping template
         ignore_mapping: if True, ignores the template and reconstructs index variables with input data
         id_var_position: 0-indexed column position for the "label" variable
         id_var_name: the name that the row index label should assume in the final dtaset
@@ -233,13 +235,18 @@ def process_multi_sheets_to_frame(
 
     # process each sheet
     # note that there will be unwanted sheets, hence we need to exclude them
-    for sheet in wb.keys():
+    for sheet in wb:
 
         # skip all sheets named not like a year
         if not sheet.isnumeric():
             continue
 
         tab = wb[sheet]
+
+        if transpose_first:
+            tab = (tab.set_index(tab.columns[0])
+                   .T
+                   .reset_index(drop=False))
 
         if ignore_mapping:
 
