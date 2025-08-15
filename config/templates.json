@@ -1,6 +1,7 @@
 {
     "dukes": {
       "chapter_1": "data/templates/dukes_ch_1.xlsx",
-      "chapter_2": "data/templates/dukes_ch_2.xlsx"
+      "chapter_2": "data/templates/dukes_ch_2.xlsx",
+      "chapter_3": "data/templates/dukes_ch_3.xlsx"
     }
 }
