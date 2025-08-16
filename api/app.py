@@ -25,16 +25,16 @@ def get_data(
             'or {"year": {"gte": 2010}, "fuel": {"like": "%gas%"}} '
             'or {"$or": [{"fuel": "Gas"},{"fuel": "Coal"}], "year": {"gt": 2020}}'
         ),
-        examples={
-            "flat": '{"year": 2022, "fuel": "Petroleum products"}',
-            "nested": '{"year":{"gte":2010,"lt":2021},"fuel":{"like":"%gas%"}}',
-            "with_or": '{"$or":[{"fuel":"Gas"},{"fuel":"Coal"}], "year":{"gt":2020}}',
-        },
     ),
+    limit: int = f.Query(s.DEFAULT_LIMIT, ge=1, description=f"Max rows per page (<= {s.MAX_LIMIT})"),
+    cursor: Optional[int] = f.Query(None, description="Pagination cursor (internal rowid); return rows with rowid > cursor"),
+
 ):
     """
-    Return rows from `{collection}_prod` filtered by `table_name` (required)
-    plus optional advanced filters. Columns `ingest_id`,`ingest_ts` are removed.
+    Return rows from `{collection}_prod` filtered by `table_name` + optional filters.
+    Cursor pagination: results are ordered by internal `rowid`. Pass back `next_cursor` from the
+    previous response to get the next page. Columns `ingest_id`,`ingest_ts` are removed.
+
     """
 
     try:
@@ -79,12 +79,26 @@ def get_data(
     except Exception as e:
         raise f.HTTPException(status_code=422, detail=str(e))
 
+    limit = min(int(limit), s.MAX_LIMIT)
+
     # final query
     try:
+        # extend where for cursor
+        if cursor is not None:
+            where_sql = f"({where_sql}) AND (rowid > ?)"
+            query_params.append(int(cursor))
+
+        # order records by implicit rowid
         query = u.generate_select_sql(
+            cols=["rowid", "*"],
             from_table=f"{collection}_prod",
-            where=where_sql
+            where=where_sql,
+            order_by=["rowid"],
+            limit=True
         )
+
+        # add limit to parameters
+        query_params.append(limit)
 
         df = read_sql_as_frame(
             conn_path=s.DB_PATH,
@@ -96,13 +110,26 @@ def get_data(
     except Exception as e:
         raise f.HTTPException(status_code=500, detail=f"Unexpected error: {e}")
 
-    # clean output
-    if df is not None and not df.empty:
-        df.drop(columns=["ingest_id", "ingest_ts"], inplace=True, errors="ignore")
-        df.dropna(axis=1, how="all", inplace=True)
-        return df.to_dict(orient="records")
-    else:
-        return []
+    if df is None or df.empty:
+        return {"data": [], "next_cursor": None}
+
+    # compute next_cursor from last rowid in response.
+    # client can use this to request the next chunk
+    last_rowid = int(df["rowid"].iloc[-1])
+    next_cursor = last_rowid
+
+    # drop service/internal columns
+    df.drop(columns=["rowid",
+                     "ingest_id",
+                     "ingest_ts"],
+            inplace=True,
+            errors="ignore")
+    df.dropna(axis=1, how="all", inplace=True)
+
+    # compound response
+    return {"data": df.to_dict(orient="records"),
+            "next_cursor": next_cursor}
+
 
 
 @app.get("/metadata/{collection}")

@@ -209,6 +209,7 @@ def generate_select_sql(
         cols: list = None,
         where: str = None,
         order_by: list = None,
+        limit: bool = False,
         distinct: bool = False
 ):
     """
@@ -218,6 +219,8 @@ def generate_select_sql(
         from_table: the source table
         cols: list of columns to read. Default is "*" (all columns)
         where: explicit WHERE clause. Supports logical operators in SQL style.
+        order_by: list of columns to order by (in ascending order)
+        limit: whether to add a limit clause or not
         distinct: whether to return distinct values only. Default is False.
 
     Returns:
@@ -228,6 +231,7 @@ def generate_select_sql(
     where_clause = f"WHERE \n\t{where}" if where is not None else ""
     distinct_clause = "DISTINCT" if distinct else ""
     order_by_clause = "ORDER BY " + ", ".join(order_by) if order_by else ""
+    limit_clause = "LIMIT ?" if limit else ""
 
     query = f"""
         SELECT {distinct_clause} 
@@ -312,4 +316,4 @@ def build_where_clause(
 
     where_sql = f"({base_sql}) AND (" + " OR ".join(or_sqls) + ")"
     params = base_params + or_params
-    return where_sql, tuple(params)
+    return where_sql, params
