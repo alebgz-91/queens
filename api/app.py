@@ -13,6 +13,7 @@ app = f.FastAPI(title="UK Energy Data API")
 
 
 @app.get("/data/{collection}")
+@app.get("/{collection}")
 def get_data(
     collection: str = f.Path(..., description="Data collection key, e.g. 'dukes'"),
     table_name: str = f.Query(..., description="Table identifier within the collection, e.g. '1.1'"),
@@ -102,3 +103,38 @@ def get_data(
         return df.to_dict(orient="records")
     else:
         return []
+
+
+@app.get("/metadata/{collection}")
+def get_metadata(
+        collection: str,
+        table_name: str
+):
+
+    try:
+        # verify existence of input
+        u.check_inputs(
+            data_collection=collection,
+            table_name=table_name,
+            etl_config=s.ETL_CONFIG)
+
+    except NameError as e:
+        # unknown data collection
+        raise f.HTTPException(status_code=404, detail=str(e))
+
+    try:
+        query = u.generate_select_sql(
+            from_table="_metadata",
+            where="data_collection = ? AND table_name =?"
+        )
+        df = read_sql_as_frame(
+            conn_path=s.DB_PATH,
+            query=query,
+            query_params=(collection, table_name)
+        )
+    except (sqlite3.OperationalError, sqlite3.DatabaseError) as e:
+        raise f.HTTPException(status_code=500, detail=f"Database error: {e}")
+    except Exception as e:
+        raise f.HTTPException(status_code=500, detail=f"Unexpected error: {e}")
+
+    return df.to_dict(orient="records")
