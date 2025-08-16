@@ -6,7 +6,7 @@ import config.settings as s
 import os
 import logging
 import datetime
-import src.utils as u
+import core.utils as u
 
 
 def read_and_wrangle_wb(

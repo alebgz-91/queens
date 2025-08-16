@@ -1,6 +1,6 @@
 import etl.validation as ts
-import src.read_write as rw
-import src.utils as u
+import core.read_write as rw
+import core.utils as u
 import etl.transformations as tr
 import config.settings as s
 import logging

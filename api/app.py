@@ -2,11 +2,11 @@ import sqlite3
 
 import fastapi as f
 from typing import Optional
-import src.utils as u
+import core.utils as u
 import json
 import etl.validation as vld
 
-from src.read_write import read_sql_as_frame
+from core.read_write import read_sql_as_frame
 import config.settings as s
 
 app = f.FastAPI(title="UK Energy Data API")
