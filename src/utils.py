@@ -208,6 +208,7 @@ def generate_select_sql(
         from_table: str,
         cols: list = None,
         where: str = None,
+        order_by: list = None,
         distinct: bool = False
 ):
     """
@@ -226,13 +227,15 @@ def generate_select_sql(
     select_block = ", ".join(cols) if cols is not None else "*\n"
     where_clause = f"WHERE \n\t{where}" if where is not None else ""
     distinct_clause = "DISTINCT" if distinct else ""
+    order_by_clause = "ORDER BY " + ", ".join(order_by) if order_by else ""
 
     query = f"""
         SELECT {distinct_clause} 
             {select_block}
         FROM
             {from_table}
-        {where_clause};
+        {where_clause}
+        {order_by_clause};
     """
 
     return query
