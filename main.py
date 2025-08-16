@@ -2,6 +2,7 @@ import typer
 from typing import Optional, List
 import logging
 from tabulate import tabulate
+import uvicorn
 
 # enable logging
 logging.basicConfig(
@@ -203,6 +204,78 @@ def export(
             )
     except Exception as e:
         typer.echo(f"An error has occurred when exporting data: \n{e}")
+        raise typer.Exit(code=1)
+
+
+@app.command()
+def serve(
+    host: str = typer.Option("127.0.0.1", "--port"),
+    port: int =  typer.Option(8000, "--port"),
+    reload: bool = typer.Option(False, "--reload", help="Dev reload (spawns reloader process)"),
+    log_level: str = typer.Option("info", "--log-level")
+):
+    """
+    Starts the QUEENS API using Uvicorn. The app is not started unless at least one data collection has been staged.
+    """
+
+    collections = list(s.SCHEMA.keys())  # or s.ETL_CONFIG.keys()
+    missing = []
+    for coll in collections:
+        prod = f"{coll}_prod"
+        if not is_staged(s.DB_PATH, coll):
+            missing.append(coll)
+
+    if missing:
+        if len(missing) == len(s.SCHEMA.keys()):
+            typer.echo("No data collection staged. Run `queens stage <collection>` before proceeding")
+            raise typer.Exit(code=1)
+
+        # simple warning if at least one data collection has been staged
+        typer.echo(
+            f"WARNING: the following data collections have not been staged: {missing}" +
+            "Data from these collections will not be served through the API."
+        )
+
+    # start API (uvicorn)
+    try:
+        config = uvicorn.Config(
+            app="api.app:app",
+            host=host,
+            port=port,
+            reload=reload,
+            log_level=log_level,
+        )
+        server = uvicorn.Server(config)
+
+        typer.echo(f"Starting API at http://{host}:{port} (reload={reload})")
+
+        # Blocking call; returns when server stops
+        server.run()
+
+        # if server failed to start:
+        if not server.started and not server.should_exit:
+            typer.echo("Uvicorn did not start (unknown state).")
+            raise typer.Exit(code=1)
+
+        # normal stop
+        raise typer.Exit(code=0)
+
+    except KeyboardInterrupt:
+        typer.echo("\nShutting down...")
+        raise typer.Exit(code=0)
+
+    except OSError as e:
+        # address already in use (Linux errno 98; Windows 10013/10048)
+        if getattr(e, "errno", None) in (98, 10013, 10048):
+            typer.echo(f"Port {port} is already in use on {host}. "
+                       f"Try --port {port + 1} or stop the other process.", err=True)
+            raise typer.Exit(code=2)
+
+        typer.echo(f"OSError while starting Uvicorn: {e}", err=True)
+        raise typer.Exit(code=1)
+
+    except Exception as e:
+        typer.echo(f"Failed to start server: {e}")
         raise typer.Exit(code=1)
 
 
