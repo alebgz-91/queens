@@ -16,7 +16,7 @@ logging.basicConfig(
 
 from etl.bootstrap import initialize, is_staged
 from etl.process import *
-import src.read_write as rw
+import core.read_write as rw
 import config.settings as s
 
 app = typer.Typer()
