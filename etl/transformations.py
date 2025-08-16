@@ -1,5 +1,3 @@
-from holoviews.examples.gallery.apps.bokeh.crossfilter import columns
-
 from src.read_write import read_and_wrangle_wb
 from src.utils import remove_note_tags
 import pandas as pd
@@ -33,6 +31,7 @@ def process_sheet_to_frame(
         data_collection: name of the series the workbook belongs to (i.e. "dukes")        sheet_names: list of sheets to be processed
         var_to_melt: if map_on_cols is False, this is the name of the variable on the columns, otherwise is the name of the index column. Default is "Year"
         has_multi_headers: whether the table as a 2-levels header that starts on column B.
+        drop_cols: list of column names to drop before transposing (if required) and processing. Columns can vary across sheets.
         transpose_first: whether to transpose the table before doing any reshaping. This will use var_to_mel as name for the transposed column headings
         ignore_mapping: if True, ignores the template and reconstructs the index columns using input data
         id_var_position: the 0-indexed position of the column to use as "label" and primary index
@@ -213,6 +212,7 @@ def process_multi_sheets_to_frame(
         var_on_cols: name of the column headings variable (default is fuel)
         var_on_sheets: name of the variable on sheet names (default is year)
         skip_sheets: list of sheets to discard
+        drop_cols: list of column names to drop before transposing (if required) and processing. Columns can vary across sheets.
         transpose_first: if True, every sheet is transposed before applying the mapping template
         ignore_mapping: if True, ignores the template and reconstructs index variables with input data
         id_var_position: 0-indexed column position for the "label" variable
