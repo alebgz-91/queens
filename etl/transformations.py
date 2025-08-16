@@ -1,5 +1,5 @@
-from src.read_write import read_and_wrangle_wb
-from src.utils import remove_note_tags
+from core.read_write import read_and_wrangle_wb
+from core.utils import remove_note_tags
 import pandas as pd
 
 

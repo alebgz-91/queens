@@ -1,8 +1,8 @@
 import pandas as pd
 from config.settings import DTYPES, VALID_OPS
-import src.web_scraping as ws
-import src.utils as u
-import src.read_write as rw
+import core.web_scraping as ws
+import core.utils as u
+import core.read_write as rw
 
 def generate_config(data_collection: str,
                     table_name: str,

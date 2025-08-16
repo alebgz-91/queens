@@ -1,4 +1,4 @@
-from src.utils import parse_json
+from core.utils import parse_json
 from configparser import ConfigParser
 # ---
 # --------------------------------------------

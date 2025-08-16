@@ -1,7 +1,7 @@
 from pathlib import Path
 import logging
-import src.read_write as rw
-import src.utils as u
+import core.read_write as rw
+import core.utils as u
 
 def initialize(db_path: str, schema: dict) -> bool:
     """
