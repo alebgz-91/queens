@@ -1,32 +1,50 @@
+from pathlib import Path
+import logging
 import src.read_write as rw
 import src.utils as u
-import config.settings as s
-import logging
 
-def initialize(
-    db_path: str,
-    schema: dict
-):
+def initialize(db_path: str, schema: dict) -> bool:
+    """
+    Idempotent DB bootstrap. Returns True if any table was created.
+    """
+    created_any = False
+    Path(db_path).parent.mkdir(parents=True, exist_ok=True)
 
-    logging.info("Creating raw tables.")
+    # ingest log (sentinel)
+    if not rw.table_exists("_ingest_log", db_path):
+        logging.info("Creating _ingest_log.")
+        rw.execute_sql(conn_path=db_path, sql=u.generate_create_log_sql())
+        created_any = True
+
+    # metadata
+    if not rw.table_exists("_metadata", db_path):
+        logging.info("Creating _metadata.")
+        rw.execute_sql(conn_path=db_path, sql=u.generate_create_metadata_sql())
+        created_any = True
+
+    # raw tables per collection
     for data_collection in schema:
-        create_raw_table = u.generate_create_table_sql(data_collection,
-                                                       table_env="raw",
-                                                       schema_dict=schema)
+        raw = f"{data_collection}_raw"
+        if not rw.table_exists(raw, db_path):
+            logging.info(f"Creating {raw}.")
+            sql = u.generate_create_table_sql(
+                table_prefix=data_collection, table_env="raw", schema_dict=schema
+            )
+            rw.execute_sql(conn_path=db_path, sql=sql)
+            created_any = True
 
-        logging.info(f"Creating table {data_collection}_raw")
-        rw.execute_sql(conn_path=db_path,
-                       sql=create_raw_table)
-        logging.info(f"Successfully created table {data_collection}_raw")
+    if not created_any:
+        logging.debug("All tables already exist. Skipping initialization.")
 
-    # create log
-    create_log = u.generate_create_log_sql()
-    logging.info("Creating ingest log table.")
-    rw.execute_sql(conn_path=db_path,
-                   sql=create_log)
+    return created_any
 
-    logging.info("Creating metadata table.")
-    create_metadata = u.generate_create_metadata_sql()
-    rw.execute_sql(conn_path=db_path,
-                   sql=create_metadata)
-    return None
+
+def is_staged(
+        db_path: str,
+        data_collection: str
+) -> bool:
+    """
+    Returns True if prod exists and has rows (optionally for table_name).
+    """
+    prod = f"{data_collection}_prod"
+    return rw.table_exists(prod, db_path)

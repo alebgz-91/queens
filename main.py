@@ -13,7 +13,7 @@ logging.basicConfig(
     ]
 )
 
-from etl.bootstrap import initialize
+from etl.bootstrap import initialize, is_staged
 from etl.process import *
 import src.read_write as rw
 import config.settings as s
@@ -21,26 +21,19 @@ import config.settings as s
 app = typer.Typer()
 
 @app.callback()
-def auto_startup(c: typer.Context):
+def auto_startup(ctx: typer.Context):
     """
-    Initialises the ETL pipeline with default config.
+    Initialise DB tables only for commands that write or expect tables to exist.
     """
-    commands_requiring_init = {"ingest",
-                               "stage",
-                               "export"}
+    # only certain commands require auto-startup
+    commands_requiring_init = {"ingest", "stage", "export", "serve"}
 
-    # list of necessary tables in DB
-    if c.invoked_subcommand in commands_requiring_init:
-
-        table_list = [k + "_raw" for k in s.SCHEMA] + ["_ingest_log", "metadata"]
-        if all([rw.table_exists(t, s.DB_PATH) for t in table_list]):
-            typer.echo("Tables already initialised.")
+    if ctx.invoked_subcommand in commands_requiring_init:
+        created = initialize(db_path=s.DB_PATH, schema=s.SCHEMA)
+        if created:
+            typer.echo("Initialized QUEENS DB/tables.")
         else:
-            initialize(
-                db_path=s.DB_PATH,
-                schema=s.SCHEMA
-            )
-
+            typer.echo("DB/tables already initialized.")
 
 
 @app.command()
@@ -171,6 +164,7 @@ def info(
 
     except Exception as e:
         typer.echo(f"An error has occurred: \n{e}")
+        raise typer.Exit(code=1)
 
 
 @app.command()
@@ -181,6 +175,14 @@ def export(
         path: Optional[str] = typer.Option(s.EXPORT_PATH, "--path", "-p", help="Optional destination path"),
         bulk: Optional[bool] = typer.Option(False, "--bulk", "-b", help="Whether to save all the data in a single file or not")
 ):
+    # interrupt if data colleciton is not staged
+    if not is_staged(db_path=s.DB_PATH, data_collection=collection):
+        missing = f"{collection} staging table is missing"
+        hint = f"Run: `queens stage {collection}`"
+
+        typer.echo(f"Cannot export: {missing}. {hint}.")
+        raise typer.Exit(code=1)
+
     try:
         if table:
             typer.echo(f"Exporting {collection} table {table}...")
@@ -201,8 +203,7 @@ def export(
             )
     except Exception as e:
         typer.echo(f"An error has occurred when exporting data: \n{e}")
-
-
+        raise typer.Exit(code=1)
 
 
 if __name__ == "__main__":
