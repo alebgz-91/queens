@@ -1,5 +1,7 @@
-from core.read_write import read_and_wrangle_wb
-from core.utils import remove_note_tags
+from holoviews.examples.gallery.apps.bokeh.crossfilter import columns
+
+from src.read_write import read_and_wrangle_wb
+from src.utils import remove_note_tags
 import pandas as pd
 
 
@@ -11,6 +13,7 @@ def process_sheet_to_frame(
         var_to_melt: str = "Year",
         has_multi_headers: bool = False,
         transpose_first: bool = False,
+        drop_cols: list = None,
         ignore_mapping: bool = False,
         id_var_position: int = None,
         id_var_name: str = None,
@@ -47,21 +50,23 @@ def process_sheet_to_frame(
 
     for sheet in sheet_names:
 
-        # get table from GOV.UK
-        if transpose_first:
-            print(url)
+        # read raw sheet
+        table = read_and_wrangle_wb(file_path=url,
+                                    sheet_name=sheet,
+                                    has_multi_headers=has_multi_headers)
 
-            table = (read_and_wrangle_wb(file_path=url,
-                                         sheet_name=sheet,
-                                         has_multi_headers=has_multi_headers)
+        # remove unwanted columns
+        if drop_cols:
+            table.drop(columns=drop_cols,
+                       errors="ignore",
+                       inplace=True)
+
+        # if transposing, make sure the right column is pivoted into the headers
+        if transpose_first:
+            table = (table
                      .set_index(var_to_melt)
                      .T
                      .reset_index(drop=False))
-
-        else:
-            table = read_and_wrangle_wb(file_path = url,
-                                        sheet_name = sheet,
-                                        has_multi_headers=has_multi_headers)
 
         if ignore_mapping:
 
@@ -83,9 +88,8 @@ def process_sheet_to_frame(
 
         else:
             # all id columns come from template
-            # first columns is dropped unless otherwise specified
             table.drop(columns = table.columns[0],
-                    inplace=True)
+                       inplace=True)
 
             # get corresponding template
             template = read_and_wrangle_wb(file_path = template_file_path,
@@ -188,7 +192,8 @@ def process_multi_sheets_to_frame(
         var_on_cols: str = "fuel",
         has_multi_headers: bool = False,
         skip_sheets: list = None,
-        transpose_first: bool,
+        drop_cols: list = None,
+        transpose_first: bool = False,
         ignore_mapping: bool = False,
         id_var_position: int = None,
         id_var_name: str = None,
@@ -242,6 +247,11 @@ def process_multi_sheets_to_frame(
             continue
 
         tab = wb[sheet]
+
+        if drop_cols:
+            tab.drop(columns=drop_cols,
+                     errors="ignore",
+                     inplace=True)
 
         if transpose_first:
             tab = (tab.set_index(tab.columns[0])
