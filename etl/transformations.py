@@ -119,7 +119,12 @@ def process_sheet_to_frame(
         table.set_index(id_vars + [var_to_melt],
                         inplace=True)
 
+        # name normalisation
+        if ("4.4" in sheet) or ("4.5" in sheet):
+            sheet = sheet[:-1] + "." + sheet[-1].upper()
+
         out.update({sheet: table})
+
 
     return out
 
