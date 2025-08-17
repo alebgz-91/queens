@@ -1,6 +1,116 @@
+import re
 from core.read_write import read_and_wrangle_wb
 from core.utils import remove_note_tags
 import pandas as pd
+
+
+def _postprocess_J_1(out_dict: dict):
+    """
+    Reconstructs fuel and units for table J.1 due to unusual layout
+    """
+
+    # for heat reallocation, units need to be inferred
+    out = {}
+    for key, df in out_dict.items():
+        index_cols = list(df.index.names)
+        df.reset_index(drop=False, inplace=True)
+
+        df["unit"] = (df["fuel"]
+                       .apply(lambda x: x.split("(")[-1])
+                       .str.replace(")", "")
+                       .str.strip())
+
+        df["fuel"] = df["fuel"].apply(lambda x: x.split("(")[0].strip())
+
+        df.set_index(index_cols, inplace=True)
+        out[key] = df
+
+    return out
+
+
+def _postprocess_normalize_names(out_dict: dict):
+    """
+    Recodes sheet names in non-standard form to ordinary ids (i.e. 4.4a to 4.4.A)
+
+    """
+
+    out = {}
+    for key, df in out_dict.items():
+        key_number = key[:-1]
+        key_suffix = key[-1]
+
+        new_key = str(key_number) + "." + key_suffix.upper()
+        out[new_key] = df
+
+    return out
+
+
+def _clean_up_str_cols(df: pd.DataFrame):
+    """
+    Cleans string columns, stripping trailing whitespace and notes tags
+
+    """
+    # remove notes
+    index_cols = list(df.index.names)
+    df.reset_index(drop=False, inplace=True)
+
+    for c in df.columns:
+        if (c != "label") and (df[c].dtype == "O"):
+            df[c] = df[c].apply(remove_note_tags)
+
+    return df.set_index(index_cols)
+
+
+# maps tables to custom postprocessing if needed
+POSTPROCESSING_MAP = {
+    "J.1": _postprocess_J_1,
+    "4.4": _postprocess_normalize_names,
+    "4.5": _postprocess_normalize_names
+}
+
+
+def _postprocess(out_dict: dict, table_name: str):
+    """
+    Applies custom postprocessing (if exists) and cleans up object columns
+    """"""
+    Args:
+        out_dict: 
+        table_name: 
+
+    Returns:
+
+    """
+    # shallow copy to avoid mutating the dict
+    out = dict(out_dict)
+
+    if table_name:
+        func = POSTPROCESSING_MAP.get(table_name)
+        out = func(out_dict)
+
+    # clean columns from note tags
+    for key, df in out.items():
+        out.update({key: _clean_up_str_cols(df)})
+
+    return out
+
+
+def _is_data_sheet(
+        sheet_name: str,
+        pattern: str = None) -> bool:
+    """
+    If `pattern` is provided return True when it matches `sheet_name`
+    (using regex.search for flexibility). If no pattern is provided, fall back to numeric sheets.
+    """
+    if pattern is None:
+        return sheet_name.isnumeric()
+
+    try:
+        regex = re.compile(pattern)
+    except re.error as e:
+        raise ValueError(f"Invalid sheet selection regex: {e}")
+
+    return bool(regex.search(sheet_name))
+
 
 
 def process_sheet_to_frame(
@@ -8,6 +118,7 @@ def process_sheet_to_frame(
         template_file_path: str,
         data_collection: str,
         sheet_names: list,
+        table_name: str = None,
         var_to_melt: str = "Year",
         has_multi_headers: bool = False,
         transpose_first: bool = False,
@@ -110,21 +221,15 @@ def process_sheet_to_frame(
                         var_name = var_to_melt,
                         value_name = "value")
 
-        # remove notes
-        for c in table.columns:
-            if (c != "label") and (table[c].dtype == "O"):
-                table[c] = table[c].apply(remove_note_tags)
 
         # set index
         table.set_index(id_vars + [var_to_melt],
                         inplace=True)
 
-        # name normalisation
-        if ("4.4" in sheet) or ("4.5" in sheet):
-            sheet = sheet[:-1] + "." + sheet[-1].upper()
-
         out.update({sheet: table})
 
+    out = _postprocess(out_dict=out,
+                       table_name=table_name)
 
     return out
 
@@ -193,6 +298,7 @@ def process_multi_sheets_to_frame(
         data_collection: str,
         table_name: str,
         var_on_sheets: str = "year",
+        sheet_name_pattern: str = None,
         var_on_cols: str = "fuel",
         has_multi_headers: bool = False,
         skip_sheets: list = None,
@@ -216,6 +322,7 @@ def process_multi_sheets_to_frame(
         has_multi_headers: whether the table as a 2-level header that starts on column B
         var_on_cols: name of the column headings variable (default is fuel)
         var_on_sheets: name of the variable on sheet names (default is year)
+        sheet_name_pattern: a regex patter to match against sheet names. Only sheets that match are processed and consolidated
         skip_sheets: list of sheets to discard
         drop_cols: list of column names to drop before transposing (if required) and processing. Columns can vary across sheets.
         transpose_first: if True, every sheet is transposed before applying the mapping template
@@ -248,7 +355,7 @@ def process_multi_sheets_to_frame(
     for sheet in wb:
 
         # skip all sheets named not like a year
-        if not sheet.isnumeric():
+        if not _is_data_sheet(sheet, sheet_name_pattern):
             continue
 
         tab = wb[sheet]
@@ -302,25 +409,14 @@ def process_multi_sheets_to_frame(
         # append to master
         res = pd.concat([res, tab], axis=0)
 
-    # clean former column heading
-    if table_name == "J.1":
-        # for heat reallocation, units need to be inferred
-        res["unit"] = (res["fuel"]
-                       .apply(lambda x: x.split("(")[-1])
-                       .str.replace(")", "")
-                       .str.strip())
 
-        res["fuel"] = res["fuel"].apply(lambda x: x.split("(")[0].strip())
-
-    for c in res.columns:
-        if (c != "label") and (res[c].dtype == "O"):
-            res[c] = res[c].apply(remove_note_tags)
 
     # set index
     res.set_index(id_vars + [var_on_sheets, var_on_cols],
                  inplace=True)
 
-    return {table_name: res}
+    out = {table_name: res}
 
+    out = _postprocess(out_dict=out, table_name=table_name)
 
-
+    return out
