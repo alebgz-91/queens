@@ -3,6 +3,7 @@ from config.settings import DTYPES, VALID_OPS
 import core.web_scraping as ws
 import core.utils as u
 import core.read_write as rw
+import logging
 
 def generate_config(data_collection: str,
                     table_name: str,
@@ -25,17 +26,22 @@ def generate_config(data_collection: str,
 
     """
     # get static config dict
+    logging.debug(f"Fetch config for data collection; {data_collection}")
     config = etl_config[data_collection][chapter_key][table_name]
 
     # determine table url
+    logging.debug(f"Fetch urls for chapter: {chapter_key}")
     chapter_page_url = urls[data_collection][chapter_key]
+
+    logging.debug("Scrape table url from web")
     url = ws.get_dukes_urls(url=chapter_page_url)[table_name]["url"]
 
     # determine the template file path
+    logging.debug("Fetch template path")
     template_file_path = templates[data_collection][chapter_key]
 
     # add url, template_path and data_collection to f_args
-    config["f_args"].ingest({
+    config["f_args"].update({
         "url": url,
         "template_file_path": template_file_path,
         "data_collection": data_collection
@@ -52,6 +58,7 @@ def validate_schema(
 ):
 
     # check for duplicates
+    logging.debug("Starting schema validation")
     if df.index.duplicated().sum() > 0:
         raise ValueError(f"There are duplicates in table {table_name} of data collection {data_collection}. Check mapping table.")
 
@@ -64,7 +71,7 @@ def validate_schema(
     # add id cols as a column                               data_collection=data_collection)
     df["table_name"] = table_name
 
-    # check data types and cast
+    logging.debug("Check data types for each columns")
     for col_name in df:
 
         if col_name not in schema:
@@ -100,6 +107,8 @@ def validate_schema(
         n_non_nulls = df[col_name].notnull().sum()
         if (n_rows > n_non_nulls) and (not exp_null):
             raise ValueError(f"Column {col_name} is not nullable but NULLs were found.")
+
+        logging.debug(f"Finished validating column {col_name}")
 
     return df
 

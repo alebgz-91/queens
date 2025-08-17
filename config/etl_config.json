@@ -168,25 +168,25 @@
             "3.3": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheen_names": ["3.3"]
+                    "sheet_names": ["3.3"]
                 }
             },
             "3.4": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheen_names": ["3.4"]
+                    "sheet_names": ["3.4"]
                 }
             },
             "3.5": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheen_names": ["3.5"]
+                    "sheet_names": ["3.5"]
                 }
             },
             "3.6": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheen_names": ["3.6"]
+                    "sheet_names": ["3.6"]
                 }
             },
             "3.7": {
