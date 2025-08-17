@@ -9,6 +9,10 @@ import etl.validation as vld
 from core.read_write import read_sql_as_frame
 import config.settings as s
 
+DEFAULT_LIMIT = 1000
+MAX_LIMIT = 5000
+
+
 app = f.FastAPI(title="UK Energy Data API")
 
 
@@ -26,7 +30,7 @@ def get_data(
             'or {"$or": [{"fuel": "Gas"},{"fuel": "Coal"}], "year": {"gt": 2020}}'
         ),
     ),
-    limit: int = f.Query(s.DEFAULT_LIMIT, ge=1, description=f"Max rows per page (<= {s.MAX_LIMIT})"),
+    limit: int = f.Query(DEFAULT_LIMIT, ge=1, description=f"Max rows per page (<= {MAX_LIMIT})"),
     cursor: Optional[int] = f.Query(None, description="Pagination cursor (internal rowid); return rows with rowid > cursor"),
 
 ):
@@ -67,7 +71,7 @@ def get_data(
         raise f.HTTPException(status_code=422, detail=str(e))
 
     # build WHERE
-    base["table_name"] = {"eq": table_name}  # ensure mandatory filter
+    base["table_name"] = {"eq": table_name}
     try:
         schema_dict = s.SCHEMA[collection]
         where_sql, query_params = u.build_where_clause(
@@ -79,44 +83,48 @@ def get_data(
     except Exception as e:
         raise f.HTTPException(status_code=422, detail=str(e))
 
-    limit = min(int(limit), s.MAX_LIMIT)
+    limit = min(int(limit), MAX_LIMIT)
 
     # final query
     try:
         # extend where for cursor
+        where_curs = where_sql
         if cursor is not None:
-            where_sql = f"({where_sql}) AND (rowid > ?)"
+            where_curs = f"({where_sql}) AND (rowid > ?)"
             query_params.append(int(cursor))
 
         # order records by implicit rowid
         query = u.generate_select_sql(
             cols=["rowid", "*"],
             from_table=f"{collection}_prod",
-            where=where_sql,
+            where=where_curs,
             order_by=["rowid"],
             limit=True
         )
 
         # add limit to parameters
         query_params.append(limit)
+        print(query)
+        print(query_params)
 
         df = read_sql_as_frame(
             conn_path=s.DB_PATH,
             query=query,
-            query_params=query_params
+            query_params=tuple(query_params)
         )
     except (sqlite3.OperationalError, sqlite3.DatabaseError) as e:
-        raise f.HTTPException(status_code=500, detail=f"Database error: {e}")
+        raise f.HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:
-        raise f.HTTPException(status_code=500, detail=f"Unexpected error: {e}")
+        raise f.HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
     if df is None or df.empty:
         return {"data": [], "next_cursor": None}
 
-    # compute next_cursor from last rowid in response.
-    # client can use this to request the next chunk
-    last_rowid = int(df["rowid"].iloc[-1])
-    next_cursor = last_rowid
+    # optimistic last-page check
+    if len(df) < limit:
+        next_cursor = None
+    else:
+        next_cursor = int(df["rowid"].iloc[-1])
 
     # drop service/internal columns
     df.drop(columns=["rowid",
