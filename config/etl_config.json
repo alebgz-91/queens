@@ -256,6 +256,39 @@
                 "f_args": {
                     "sheet_names": ["4.3"]
                 }
+            },
+            "4.4": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "sheet_names": ["4.4a"],
+                    "ignore_mapping": true,
+                    "id_var_position": 0,
+                    "id_var_name": "item",
+                    "unit": "GWh"
+                }
+            },
+            "4.5": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "sheet_names": ["4.5a"],
+                    "drop_cols": ["Pipeline/ LNG", "Country of origin/ destination"]
+                }
+            },
+            "4.6": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "sheet_names": ["4.6"],
+                    "ignore_mapping": true,
+                    "id_var_position": 0,
+                    "id_var_name": "item",
+                    "unit": "GWh"
+                }
+            },
+            "F.2": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "sheet_names": ["F.2"]
+                }
             }
         }
 
