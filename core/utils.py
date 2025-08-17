@@ -239,7 +239,8 @@ def generate_select_sql(
         FROM
             {from_table}
         {where_clause}
-        {order_by_clause};
+        {order_by_clause}
+        {limit_clause};
     """
 
     return query
