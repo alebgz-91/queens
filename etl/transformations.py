@@ -1,5 +1,6 @@
 import logging
 import re
+import numpy as np
 
 from core.read_write import read_and_wrangle_wb
 from core.utils import remove_note_tags
@@ -453,3 +454,123 @@ def process_dukes_5_1(
     )
 
     return {**t_5_1, **t_5_1_A}
+
+
+
+
+def _process_dukes_5_6_summaries(
+    url: str,
+    template_file_path: str,
+    sheet_name: str,
+    fixed_header: int
+):
+
+    logging.debug("Read shifted dataframe")
+    df = read_and_wrangle_wb(url,
+                             sheet_name=sheet_name,
+                             fixed_header=fixed_header)
+
+    logging.debug("Infer first year in table")
+    first_year = df.columns[0].split("5.6.J")[1].split("summary")[0].strip()
+
+    logging.debug("Read dataframe with proper headers")
+    df = read_and_wrangle_wb(url,
+                             sheet_name=sheet_name,
+                             fixed_header=fixed_header + 1)
+
+    logging.debug("Fill in year using interim titles")
+    df["year"] = (df["Generator type"]
+                  .apply(
+        lambda s: s.split("5.6.J")[1].split("summary")[0].strip() if "Table" in s else np.nan)
+                  .fillna(method="ffill")
+
+                  .fillna(first_year)
+
+                  )
+
+    # flag rows to keep
+    df["keep_row"] = df["Generator type"].apply(
+        lambda s: 1 if ("Generator type" not in s) and ("Table" not in s) else np.nan)
+    df = (df
+          .dropna(axis=0, subset=["keep_row"])
+          .reset_index(drop=True))
+
+    df.index.name = "row_raw"
+    df.reset_index(drop=False, inplace=True)
+
+    logging.debug("Read template")
+    template = read_and_wrangle_wb(template_file_path,
+                                   sheet_name=sheet_name)
+
+    # construct joining key
+    n_rows = len(template)
+    df["row_mod"] = df["row_raw"] % n_rows
+
+    logging.debug("Apply template")
+    df = pd.merge(df,
+                  template,
+                  left_on="row_mod",
+                  right_on="row",
+                  how="inner")
+
+    logging.debug("Remove working columns")
+    df.drop(
+        columns=["row",
+                 "Generator type",
+                 "Indicator",
+                 "row_mod",
+                 "keep_row"],
+        inplace=True
+    )
+
+    df.rename(columns={"row_raw": "row"}, inplace=True)
+
+    logging.debug("Melt fuel columns")
+    df = pd.melt(df,
+                 id_vars=["row", "year", "group", "item", "unit", "label"],
+                 var_name="fuel",
+                 value_name="value")
+
+    df["fuel"] = df["fuel"].apply(remove_note_tags)
+
+    df.set_index(list(template.columns) + ["fuel"])
+
+    return df
+
+
+def process_dukes_5_6(
+        url: str,
+        template_file_path: str
+):
+    # three sheets to process
+    logging.debug("Processing main 5.6 sheet")
+    k_1, t_1 = process_sheet_to_frame(
+        url=url,
+        template_file_path=template_file_path,
+        sheet_names=["5.6"],
+        data_collection="dukes",
+        drop_cols=["Fuel"]
+    ).items()
+
+    logging.debug("Processing 5.6 conventional thermal and CCGT")
+    k2, t_2 = process_sheet_to_frame(
+        url=url,
+        template_file_path=template_file_path,
+        data_collection="dukes",
+        sheet_names=["5.6 Conventional thermal & CCGT"],
+        drop_cols=["Generator category"]
+    ).items()
+
+    logging.debug("Processing 5.6 Annual summaries")
+    t_3 = _process_dukes_5_6_summaries(
+        url=url,
+        template_file_path=template_file_path,
+        sheet_name="5.6 Annual summaries",
+        fixed_header=5
+    )
+
+    return {
+        "5.6.A_G": t_1,
+        "5.6.H_I": t_2,
+        "5.6.J": t_3
+    }

@@ -13,7 +13,8 @@ def read_and_wrangle_wb(
         file_path: str,
         has_multi_headers: bool = False,
         sheet_name: str = None,
-        skip_sheets: list = None
+        skip_sheets: list = None,
+        fixed_header: int = None
 ):
 
     """
@@ -27,6 +28,7 @@ def read_and_wrangle_wb(
         has_multi_headers: whether the table has a two-level column headings that starts on column B. If column B has a single header, it will be ignored automatically.
         sheet_name: name of sheet to read
         skip_sheets: list of sheets to ignore when parsing the whole workbook.
+        fixed_header: number of rows to skip from the top
 
     Returns:
         a dictionary of `pd.Dataframe is sheet_name = None or a pd.DataFrame otherwise`
@@ -61,16 +63,20 @@ def read_and_wrangle_wb(
             logging.debug((f"Sheet {sheet} was excluded since it only has one column."))
             continue
 
-        # increase header until the actual table heading is reached
-        while "Unnamed" in str(df.columns[1]):
-            h += 1
-            df = wb.parse(sheet, header=h)
 
-        logging.debug(f"Inferred header={h} for sheet {sheet}")
-        # remove another row if table has multiindex columns
-        if has_multi_headers:
-            logging.debug("Header increased by 1 due to multi headers.")
-            df = wb.parse(sheet, header=h+1)
+        if fixed_header:
+            df = wb.parse(sheet, header=fixed_header)
+        else:
+            # increase header until the actual table heading is reached
+            while "Unnamed" in str(df.columns[1]):
+                h += 1
+                df = wb.parse(sheet, header=h)
+
+            logging.debug(f"Inferred header={h} for sheet {sheet}")
+            # remove another row if table has multiindex columns
+            if has_multi_headers:
+                logging.debug("Header increased by 1 due to multi headers.")
+                df = wb.parse(sheet, header=h+1)
 
         # add to dictionary
         wb_as_dict.update({sheet: df})
