@@ -1,3 +1,4 @@
+import logging
 import re
 from core.read_write import read_and_wrangle_wb
 from core.utils import remove_note_tags
@@ -85,9 +86,12 @@ def _postprocess(out_dict: dict, table_name: str):
 
     if table_name:
         func = POSTPROCESSING_MAP.get(table_name)
+        logging.debug(f"Applying custom postprocessing function {func}")
+
         out = func(out_dict)
 
     # clean columns from note tags
+    logging.debug("Cleaning note tags.")
     for key, df in out.items():
         out.update({key: _clean_up_str_cols(df)})
 
@@ -158,19 +162,22 @@ def process_sheet_to_frame(
 
     out = {}
 
+    logging.debug("Processing sheets.")
     for sheet in sheet_names:
+        logging.debug(f"Processing sheet {sheet}")
 
-        # read raw sheet
+        logging.debug("Reading raw data")
         table = read_and_wrangle_wb(file_path=url,
                                     sheet_name=sheet,
                                     has_multi_headers=has_multi_headers)
 
-        # remove unwanted columns
+        logging.debug("Dropping columns if required")
         if drop_cols:
             table.drop(columns=drop_cols,
                        errors="ignore",
                        inplace=True)
 
+        logging.debug("Transposing if required.")
         # if transposing, make sure the right column is pivoted into the headers
         if transpose_first:
             table = (table
@@ -180,6 +187,7 @@ def process_sheet_to_frame(
 
         if ignore_mapping:
 
+            logging.debug("Applying manual mapping.")
             # in this case, all index vars need to be reconstructed from
             # available data and from user input
             table["row"] = range(len(table))
@@ -197,6 +205,7 @@ def process_sheet_to_frame(
                        id_var_name]
 
         else:
+            logging.debug("Applying template mapping.")
             # all id columns come from template
             table.drop(columns = table.columns[0],
                        inplace=True)
@@ -216,6 +225,7 @@ def process_sheet_to_frame(
         # variable on columns to lowercase
         var_to_melt = var_to_melt.lower()
 
+        logging.debug("Flattening columns.")
         table = pd.melt(table,
                         id_vars = id_vars,
                         var_name = var_to_melt,
@@ -223,11 +233,14 @@ def process_sheet_to_frame(
 
 
         # set index
+
+        logging.debug("Setting index.")
         table.set_index(id_vars + [var_to_melt],
                         inplace=True)
 
         out.update({sheet: table})
 
+    logging.debug("Postprocessing.")
     out = _postprocess(out_dict=out,
                        table_name=table_name)
 
@@ -247,6 +260,7 @@ def process_dukes_1_1_5(url: str):
         a dictionary containing the transformed sheet as a single dataframe
     """
     # read the whole workbook to get a list of sheets
+
     wb = pd.read_excel(url, sheet_name=None)
     sheets = list(wb.keys())
 
@@ -337,12 +351,12 @@ def process_multi_sheets_to_frame(
     if ignore_mapping and not (id_var_position or id_var_name or unit):
         raise ValueError("must provide id columns details.")
 
-    # read the whole workbook
+    logging.debug("Read the whole workbook.")
     wb = read_and_wrangle_wb(url,
                                  skip_sheets=skip_sheets)
 
     if not ignore_mapping:
-        # read the template
+        logging.debug("Reading template.")
         template = read_and_wrangle_wb(template_file_path,
                                        sheet_name=table_name,
                                        skip_sheets=skip_sheets,
@@ -350,22 +364,25 @@ def process_multi_sheets_to_frame(
 
     res = pd.DataFrame()
 
-    # process each sheet
+    logging.debug("Processing each sheet")
     # note that there will be unwanted sheets, hence we need to exclude them
     for sheet in wb:
 
         # skip all sheets named not like a year
         if not _is_data_sheet(sheet, sheet_name_pattern):
+            logging.debug(f"Sheet {sheet} was excluded." )
             continue
 
         tab = wb[sheet]
 
         if drop_cols:
+            logging.debug(f"Dropping columns in sheet {sheet}.")
             tab.drop(columns=drop_cols,
                      errors="ignore",
                      inplace=True)
 
         if transpose_first:
+            logging.debug(f"Transposing sheet {sheet}")
             tab = (tab.set_index(tab.columns[0])
                    .T
                    .reset_index(drop=False))
@@ -408,15 +425,17 @@ def process_multi_sheets_to_frame(
 
         # append to master
         res = pd.concat([res, tab], axis=0)
+        logging.debug(f"Finished with sheet {sheet}")
 
 
 
-    # set index
+    logging.debug("Setting index.")
     res.set_index(id_vars + [var_on_sheets, var_on_cols],
                  inplace=True)
 
     out = {table_name: res}
 
+    logging.debug("Postprocessing.")
     out = _postprocess(out_dict=out, table_name=table_name)
 
     return out

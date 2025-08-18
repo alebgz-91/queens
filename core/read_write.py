@@ -32,13 +32,15 @@ def read_and_wrangle_wb(
         a dictionary of `pd.Dataframe is sheet_name = None or a pd.DataFrame otherwise`
     """
 
-    # read the workbook
+    logging.debug(f"Reading workbook from {file_path}")
     wb = pd.ExcelFile(file_path)
 
     # get the list of sheets
     sheets = wb.sheet_names
 
     if sheet_name is not None:
+        if sheet_name not in sheets:
+            raise KeyError(f"Cannot find sheet {sheet_name} in workbook.")
         sheets = [sheet_name]
     elif skip_sheets:
         sheets = set(sheets) - set(skip_sheets)
@@ -46,6 +48,7 @@ def read_and_wrangle_wb(
     # parse each worksheet removing headers
     wb_as_dict = {}
 
+    logging.debug("Reading sheets.")
     for sheet in sheets:
 
         # first row will always include title
@@ -55,15 +58,18 @@ def read_and_wrangle_wb(
         # skip sheet if believed to be non-data
         # i.e. if 1 column only
         if len(df.columns) == 1:
+            logging.debug((f"Sheet {sheet} was excluded since it only has one column."))
             continue
 
         # increase header until the actual table heading is reached
-        while "Unnamed" in df.columns[1]:
+        while "Unnamed" in str(df.columns[1]):
             h += 1
             df = wb.parse(sheet, header=h)
 
+        logging.debug(f"Inferred header={h} for sheet {sheet}")
         # remove another row if table has multiindex columns
         if has_multi_headers:
+            logging.debug("Header increased by 1 due to multi headers.")
             df = wb.parse(sheet, header=h+1)
 
         # add to dictionary
@@ -72,6 +78,7 @@ def read_and_wrangle_wb(
     # close the Excel workbook
     wb.close()
 
+    logging.debug("Reading and wrangling finished.")
     # return df if specific sheet is required
     if sheet_name is not None:
         return wb_as_dict[sheet_name]
