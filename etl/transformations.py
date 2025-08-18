@@ -464,6 +464,20 @@ def _process_dukes_5_6_summaries(
     sheet_name: str,
     fixed_header: int
 ):
+    """
+    Ad-hoc processing for the Annual summaries sheet of DUKES table 5.6.
+    The function resolves the non-standard format (multiple tables on the same sheet, reference year
+    stored outside of each table).
+
+    Args:
+        url: workbook URL
+        template_file_path: file path of the template table
+        sheet_name: name of the sheet to process
+        fixed_header: rows to remove from the top. Overrides auto header removal.
+
+    Returns:
+        a pd.DataFrame for the transformed dataset
+    """
 
     logging.debug("Read shifted dataframe")
     df = read_and_wrangle_wb(url,
@@ -542,6 +556,19 @@ def process_dukes_5_6(
         url: str,
         template_file_path: str
 ):
+    """
+    Custom processing function for table DUKES 5.6. The function processes
+    thre three sheets according to their different shapes, calling standard trnasformers
+    plus one ad-hoc wrangling function for the last sheet.
+
+    Args:
+        url: the workbook URL
+        template_file_path: path of template tables
+
+    Returns:
+        a dictionary with the three sheets transformed and named in standard format
+
+    """
     # three sheets to process
     logging.debug("Processing main 5.6 sheet")
     k_1, t_1 = process_sheet_to_frame(
@@ -553,7 +580,7 @@ def process_dukes_5_6(
     ).items()
 
     logging.debug("Processing 5.6 conventional thermal and CCGT")
-    k2, t_2 = process_sheet_to_frame(
+    k_2, t_2 = process_sheet_to_frame(
         url=url,
         template_file_path=template_file_path,
         data_collection="dukes",
@@ -574,3 +601,28 @@ def process_dukes_5_6(
         "5.6.H_I": t_2,
         "5.6.J": t_3
     }
+
+
+def process_dukes_5_10(
+        url: str,
+        template_file_path: str
+):
+    logging.debug("Processing sheet A")
+    d_1 = process_sheet_to_frame(
+        url=url,
+        template_file_path=template_file_path,
+        data_collection="dukes",
+        sheet_names=["5.10.A"],
+        drop_cols=["Region"]
+    )
+
+    logging.debug("Processing sheet B/C")
+    k, t = process_sheet_to_frame(
+        url=url,
+        template_file_path=template_file_path,
+        data_collection="dukes",
+        sheet_names=["5.10.B and 5.10.C"]
+    )
+
+    return {**d_1, "5.10.B_C": t}
+
