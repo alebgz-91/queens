@@ -4,6 +4,22 @@ from core.read_write import read_and_wrangle_wb
 from core.utils import remove_note_tags
 import pandas as pd
 
+def _postprocess_1_1_5(out_dict: dict):
+    """
+    Recode sector removing the sheet name tags.
+    """
+
+    out = {}
+    for key, df in out_dict.items():
+        index_cols = list(df.index.names)
+        df.reset_index(drop=False, inplace=True)
+        df["sector"] = df["sector"].apply(lambda s: s.split("1.1.5")[1].strip())
+
+        df.set_index(index_cols, inplace=True)
+        out.update({key: df})
+
+    return out
+
 
 def _postprocess_J_1(out_dict: dict):
     """
@@ -64,6 +80,7 @@ def _clean_up_str_cols(df: pd.DataFrame):
 
 # maps tables to custom postprocessing if needed
 POSTPROCESSING_MAP = {
+    "1.1.5": _postprocess_1_1_5,
     "J.1": _postprocess_J_1,
     "4.4": _postprocess_normalize_names,
     "4.5": _postprocess_normalize_names
@@ -86,9 +103,9 @@ def _postprocess(out_dict: dict, table_name: str):
 
     if table_name:
         func = POSTPROCESSING_MAP.get(table_name)
-        logging.debug(f"Applying custom postprocessing function {func}")
-
-        out = func(out_dict)
+        if func is not None:
+            logging.debug(f"Applying custom postprocessing function {func}")
+            out = func(out_dict)
 
     # clean columns from note tags
     logging.debug("Cleaning note tags.")
@@ -247,65 +264,6 @@ def process_sheet_to_frame(
     return out
 
 
-
-
-def process_dukes_1_1_5(url: str):
-    """
-    Function that transforms table 1.1.5 (a multi-sheet time series of energy
-    consumption) into a single machine friendly table
-    Args:
-        url: the full HTTP address of the table
-
-    Returns:
-        a dictionary containing the transformed sheet as a single dataframe
-    """
-    # read the whole workbook to get a list of sheets
-
-    wb = pd.read_excel(url, sheet_name=None)
-    sheets = list(wb.keys())
-
-    # remote the non-data sheets
-    sheets = [s for s in sheets if "1.1.5" in s]
-
-    # process each sheet separately, then collate into single dataframe
-    res = pd.DataFrame()
-    for s in sheets:
-        tab = read_and_wrangle_wb(url, sheet_name=s)
-
-        # get row number as a column
-        tab["row"] = range(len(tab))
-
-        # keep original column
-        tab["label"] = tab["Year"].astype(str)
-
-        # encode sector from sheet name
-        sector = s.split("1.1.5")[1].strip()
-
-        # flatten columns
-        tab = pd.melt(tab,
-                      id_vars=["Year", "row", "label"],
-                      var_name="fuel",
-                      value_name="value")
-        tab["sector"] = sector
-
-        # append to master df
-        res = pd.concat([res, tab], axis=0)
-
-    res["unit"] = "ktoe"
-    res.rename(columns={"Year": "year"}, inplace=True)
-
-    for c in res.columns:
-        if (c != "label") and (res[c].dtype == "O"):
-            res[c] = res[c].apply(remove_note_tags)
-
-    index_cols = ["year", "sector", "fuel"]
-    res.set_index(index_cols, inplace=True)
-
-    return {"1.1.5": res}
-
-
-
-
 def process_multi_sheets_to_frame(
         url: str,
         template_file_path: str,
@@ -421,7 +379,7 @@ def process_multi_sheets_to_frame(
                       value_name="value")
 
         # add sheet name as a variable
-        tab[var_on_sheets] = int(sheet)
+        tab[var_on_sheets] = sheet
 
         # append to master
         res = pd.concat([res, tab], axis=0)

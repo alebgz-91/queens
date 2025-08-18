@@ -55,8 +55,15 @@
             },
 
             "1.1.5": {
-                "f": "process_dukes_1_1_5",
+                "f": "process_multi_sheets_to_frame",
                 "f_args": {
+                    "table_name": "1.1.5",
+                    "ignore_mapping": true,
+                    "sheet_name_pattern": "1\\.1\\.5",
+                    "var_on_sheets": "sector",
+                    "id_var_position": 0,
+                    "id_var_name": "year",
+                    "unit": "ktoe"
                 }
             },
 
