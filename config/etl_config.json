@@ -326,9 +326,62 @@
                     "sheet_names": ["5.4", "5.4.A"],
                     "drop_cols": ["Fuel used, Generation or Consumption\n"]
                 }
+            },
+            "5.5": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "sheet_names": ["5.5"]
+                }
+            },
+            "5.6": {
+                "f": "process_dukes_5_6",
+                "f_args": {}
+            }
+        },
+        "5.7": {
+            "f": "process_sheet_to_frame",
+            "f_args": {
+                "sheet_names": ["5.7"],
+                "drop_cols": ["Fuel"]
+            }
+        },
+        "5.8": {
+            "f": "process_sheet_to_frame",
+            "f_args": {
+                "sheet_names": ["5.8"],
+                "drop_cols": ["Fuel"]
+            }
+        },
+        "5.9": {
+            "f": "process_sheet_to_frame",
+            "f_args": {
+                "sheet_names": ["5.9"],
+                "ignore_mapping": true,
+                "id_var_position": 0,
+                "id_var_name": "sector",
+                "unit": "MW"
+            }
+        },
+        "5.10": {
+            "f": "process_dukes_5_10",
+            "f_args": {}
+        },
+        "5.12": {
+
+        },
+        "5.13": {
+
+        },
+        "5.14": {
+            "f": "process_sheet_to_frame",
+            "f_args": {
+                "sheet_names": ["5.14"],
+                "ignore_mapping": true,
+                "id_var_position": 0,
+                "id_var_name": "fuel",
+                "unit": "t of CO2 / GWh supplied"
             }
         }
-
-
     }
+
 }
