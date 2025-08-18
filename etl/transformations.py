@@ -1,5 +1,6 @@
 import logging
 import re
+
 from core.read_write import read_and_wrangle_wb
 from core.utils import remove_note_tags
 import pandas as pd
@@ -45,6 +46,32 @@ def _postprocess_J_1(out_dict: dict):
     return out
 
 
+def _postprocess_5_2(out_dict):
+    """
+    Split compound variable into separate columns
+    """
+    out = {}
+
+    for key,df in out_dict.items():
+        index_cols = list(df.index.names)
+        df.reset_index(drop=False, inplace=True)
+
+        df["sector"] = (df["raw_idx"]
+                        .apply(lambda s: s.split("(")[0].strip())
+                        .str.replace("Total", "All"))
+        df["year"] = (df["raw_idx"]
+                      .apply(lambda s: s.split("(")[1].strip())
+                      .str.replace(")", "")
+                      .str.strip()
+                      .astype(int))
+        # remove compound index and add resulting variables
+        index_cols.remove("raw_idx")
+        index_cols.extend(["sector", "year"])
+
+        df.set_index(index_cols, inplace=True)
+        out[key] = df
+
+
 def _postprocess_normalize_names(out_dict: dict):
     """
     Recodes sheet names in non-standard form to ordinary ids (i.e. 4.4a to 4.4.A)
@@ -83,7 +110,8 @@ POSTPROCESSING_MAP = {
     "1.1.5": _postprocess_1_1_5,
     "J.1": _postprocess_J_1,
     "4.4": _postprocess_normalize_names,
-    "4.5": _postprocess_normalize_names
+    "4.5": _postprocess_normalize_names,
+    "5.2": _postprocess_5_2
 }
 
 
@@ -397,3 +425,31 @@ def process_multi_sheets_to_frame(
     out = _postprocess(out_dict=out, table_name=table_name)
 
     return out
+
+
+def process_dukes_5_1(
+        url: str,
+        template_file_path: str
+):
+    """
+    Calls transformer on separate sheets with different parameters
+
+    """
+    logging.debug("Processing 5.1 main sheet.")
+    t_5_1 = process_sheet_to_frame(
+        url=url,
+        data_collection="dukes",
+        template_file_path=template_file_path,
+        sheet_names=["5.1"]
+    )
+
+    logging.debug("Processing 5.1.A")
+    t_5_1_A = process_sheet_to_frame(
+        url=url,
+        data_collection="dukes",
+        template_file_path=template_file_path,
+        sheet_names=["5.1.A"],
+        drop_cols=["Generator type", "Technology"]
+    )
+
+    return {**t_5_1, **t_5_1_A}
