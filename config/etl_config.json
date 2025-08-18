@@ -268,6 +268,7 @@
                 "f": "process_sheet_to_frame",
                 "f_args": {
                     "sheet_names": ["4.4a"],
+                    "table_name": "4.4",
                     "ignore_mapping": true,
                     "id_var_position": 0,
                     "id_var_name": "item",
@@ -278,7 +279,8 @@
                 "f": "process_sheet_to_frame",
                 "f_args": {
                     "sheet_names": ["4.5a"],
-                    "drop_cols": ["Pipeline/ LNG", "Country of origin/ destination"]
+                    "drop_cols": ["Pipeline/ LNG", "Country of origin/ destination"],
+                    "table_name": "4.5"
                 }
             },
             "4.6": {
@@ -297,7 +299,36 @@
                     "sheet_names": ["F.2"]
                 }
             }
+        },
+        "chapter_5": {
+            "5.1": {
+                "f": "process_dukes_5_1",
+                "f_args": {}
+            },
+            "5.2": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "table_name": "5.2",
+                    "sheet_names": ["5.2"],
+                    "var_to_melt": "raw_idx"
+                }
+            },
+            "5.3": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "sheet_names": ["5.3"],
+                    "drop_cols": ["Fuel"]
+                }
+            },
+            "5.4": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "sheet_names": ["5.4", "5.4.A"],
+                    "drop_cols": ["Fuel used, Generation or Consumption\n"]
+                }
+            }
         }
+
 
     }
 }
