@@ -44,9 +44,13 @@ def table_to_chapter(table_number, data_collection):
     else:
         if first_char in ["I", "J"]:
             return "chapter_1"
+        elif table_number in ("E.1", "F.3", "F.4"):
+            return "chapter_3"
+        elif table_number in ["F.2"]:
+            return "chapter_4"
         else:
             # further logic to come
-            raise NotImplemented("Work in process.")
+            raise NotImplementedError("Work in process.")
 
 
 def check_path(file_path: str):

@@ -30,13 +30,14 @@ def get_dukes_urls(url):
             link_text = link.text.strip()
 
             # Allow optional comma and whitespace between DUKES and number
-            match = re.search(r"DUKES[\s,]*((\d+)(\.\d+)*)([a-z]*)",
+            pattern = r"DUKES[\s,]*((?:\d+(?:\.\d+)*|[A-Z](?:\.\d+)+))([a-z]*)"
+            match = re.search(pattern,
                               link_text,
                               re.IGNORECASE)
 
             if match:
                 table_number = match.group(1)
-                suffix = match.group(4).lower()
+                suffix = match.group(2).lower()
                 key = f"{table_number}{suffix}"
                 full_url = href if href.startswith("http") else f"https://www.gov.uk{href}"
 
