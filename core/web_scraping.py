@@ -3,7 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 
 
-def get_dukes_urls(url):
+def _get_dukes_urls(url):
     """
     Scrapes GOV.UK for links to DUKES Excel tables, extracting their numbers and URLs.
 
@@ -42,8 +42,33 @@ def get_dukes_urls(url):
                 full_url = href if href.startswith("http") else f"https://www.gov.uk{href}"
 
                 dukes_tables[key] = {
-                    "name": link_text,
+                    "description": link_text,
                     "url": full_url
                 }
 
     return dukes_tables
+
+
+
+SCRAPERS_MAP = {
+    "dukes": _get_dukes_urls
+}
+
+
+def scrape_urls(data_collection: str, url: str):
+    """
+    Scrape the table urls from the given chapter page
+    Args:
+        data_collection: name of the data collection
+        url: chapter page containing the urls to scrape
+
+    Returns:
+        a dictionary of table information
+    """
+
+    func = SCRAPERS_MAP.get(data_collection)
+
+    if func is None:
+        raise NotImplementedError(f"No scraping for this data collection has been implemented: {data_collection}")
+
+    return  func(url)

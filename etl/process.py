@@ -80,6 +80,7 @@ def ingest_tables(
                     to_table=to_table,
                     data_collection=data_collection,
                     url=f_args["url"],
+                    table_descr=config["table_description"],
                     conn_path=s.DB_PATH,
                     ingest_ts=ingest_ts
                 )
@@ -89,7 +90,7 @@ def ingest_tables(
         logging.error(f"ETL tailed for {data_collection}: \n{e}")
         raise e
 
-    logging.info(f"Finished ETL update for selected tables in {data_collection}")
+    logging.info(f"Finished ETL update for all tables.")
     return None
 
 

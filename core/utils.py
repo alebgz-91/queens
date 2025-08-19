@@ -183,12 +183,13 @@ def generate_create_table_sql(
 def generate_create_log_sql():
     sql = """
         CREATE TABLE IF NOT EXISTS [_ingest_log] (\n
-            ingest_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ingest_ts DATETIME NOT NULL,
-            data_collection TEXT NOT NULL,
-            table_name TEXT NOT NULL,
-            url TEXT,
-            success INTEGER
+            ingest_id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            ingest_ts           DATETIME NOT NULL,
+            data_collection     TEXT NOT NULL,
+            table_name          TEXT NOT NULL,
+            url                 TEXT,
+            table_description,  TEXT,
+            success             INTEGER
             );
     """
     return sql
