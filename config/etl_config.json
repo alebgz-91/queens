@@ -232,7 +232,7 @@
                     "sheet_names": ["E.1"]
                 }
             },
-            "E.3": {
+            "F.3": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
                     "sheet_names": ["F.3"]
@@ -296,7 +296,8 @@
             "F.2": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["F.2"]
+                    "sheet_names": ["F.2"],
+                    "table_name": "F.2"
                 }
             }
         },
@@ -324,7 +325,7 @@
                 "f": "process_sheet_to_frame",
                 "f_args": {
                     "sheet_names": ["5.4", "5.4.A"],
-                    "drop_cols": ["Fuel used, Generation or Consumption\n"]
+                    "drop_cols": ["Fuel used, Generation or Consumption"]
                 }
             },
             "5.5": {

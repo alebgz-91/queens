@@ -1,5 +1,6 @@
 import logging
 import re
+
 import numpy as np
 
 from core.read_write import read_and_wrangle_wb
@@ -47,7 +48,7 @@ def _postprocess_J_1(out_dict: dict):
     return out
 
 
-def _postprocess_5_2(out_dict):
+def _postprocess_dukes_5_2(out_dict):
     """
     Split compound variable into separate columns
     """
@@ -67,12 +68,32 @@ def _postprocess_5_2(out_dict):
         # remove compound index and add resulting variables
         index_cols.remove("raw_idx")
         index_cols.extend(["sector", "year"])
+        df.drop(columns=["raw_idx"], inplace=True)
 
         df.set_index(index_cols, inplace=True)
         out[key] = df
 
     return out
 
+
+def _postprocess_dukes_F_2(out_dict: dict):
+    """
+    Removing cumulative year values that would fail validation
+    """
+    out = {}
+    for k, df in out_dict.items():
+        index_cols = list(df.index.names)
+        df.reset_index(drop=False, inplace=True)
+
+        df["year"] = pd.to_numeric(df["year"],
+                                   downcast="integer",
+                                   errors="coerce")
+        df.dropna(axis=0, subset=["year"], inplace=True)
+
+        df.set_index(index_cols, inplace=True)
+        out[k] = df
+
+    return out
 
 def _postprocess_normalize_names(out_dict: dict):
     """
@@ -113,7 +134,8 @@ POSTPROCESSING_MAP = {
     "J.1": _postprocess_J_1,
     "4.4": _postprocess_normalize_names,
     "4.5": _postprocess_normalize_names,
-    "5.2": _postprocess_5_2
+    "F.2": _postprocess_dukes_F_2,
+    "5.2": _postprocess_dukes_5_2
 }
 
 
@@ -538,7 +560,9 @@ def _process_dukes_5_6_summaries(
         inplace=True
     )
 
-    df.rename(columns={"row_raw": "row"}, inplace=True)
+    df.rename(
+        columns={"row_raw": "row"},
+        inplace=True)
 
     logging.debug("Melt fuel columns")
     df = pd.melt(df,
@@ -548,8 +572,10 @@ def _process_dukes_5_6_summaries(
 
     df["fuel"] = df["fuel"].apply(remove_note_tags)
 
-    df.set_index(list(template.columns) + ["fuel"])
+    df.set_index(list(template.columns) + ["fuel"],
+                 inplace=True)
 
+    print(df.index.names, df.columns)
     return df
 
 
@@ -572,22 +598,22 @@ def process_dukes_5_6(
     """
     # three sheets to process
     logging.debug("Processing main 5.6 sheet")
-    k_1, t_1 = process_sheet_to_frame(
+    d_1 = process_sheet_to_frame(
         url=url,
         template_file_path=template_file_path,
         sheet_names=["5.6"],
         data_collection="dukes",
         drop_cols=["Fuel"]
-    ).items()
+    )
 
     logging.debug("Processing 5.6 conventional thermal and CCGT")
-    k_2, t_2 = process_sheet_to_frame(
+    d_2 = process_sheet_to_frame(
         url=url,
         template_file_path=template_file_path,
         data_collection="dukes",
         sheet_names=["5.6 Conventional thermal & CCGT"],
         drop_cols=["Generator category"]
-    ).items()
+    )
 
     logging.debug("Processing 5.6 Annual summaries")
     t_3 = _process_dukes_5_6_summaries(
@@ -598,8 +624,8 @@ def process_dukes_5_6(
     )
 
     return {
-        "5.6.A_G": t_1,
-        "5.6.H_I": t_2,
+        "5.6.A_G": d_1["5.6"],
+        "5.6.H_I": d_2["5.6 Conventional thermal & CCGT"],
         "5.6.J": t_3
     }
 
