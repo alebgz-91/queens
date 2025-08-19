@@ -34,11 +34,13 @@ def generate_config(data_collection: str,
     chapter_page_url = urls[data_collection][chapter_key]
 
     logging.debug("Scrape table url from web")
-    table_urls = ws.get_dukes_urls(url=chapter_page_url)
+    table_urls = ws.scrape_urls(data_collection=data_collection,
+                                url=chapter_page_url)
     if table_name not in table_urls:
         raise KeyError(f"Cannot find table URL for {data_collection} {table_name} in {chapter_page_url}")
 
     url = table_urls[table_name]["url"]
+    descr = table_urls[table_name]["description"]
 
     # determine the template file path
     logging.debug("Fetch template path")
@@ -50,6 +52,8 @@ def generate_config(data_collection: str,
         "template_file_path": template_file_path,
         "data_collection": data_collection
     })
+
+    config["table_description"] = descr
 
     return config
 

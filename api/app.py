@@ -126,16 +126,21 @@ def get_data(
     else:
         next_cursor = int(df["rowid"].iloc[-1])
 
+    # get table description
+    table_description = df["table_description"].values[0]
+
     # drop service/internal columns
     df.drop(columns=["rowid",
                      "ingest_id",
-                     "ingest_ts"],
+                     "ingest_ts",
+                     "table_description"],
             inplace=True,
             errors="ignore")
     df.dropna(axis=1, how="all", inplace=True)
 
     # compound response
     return {"data": df.to_dict(orient="records"),
+            "table_description": table_description,
             "next_cursor": next_cursor}
 
 

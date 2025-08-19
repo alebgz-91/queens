@@ -270,6 +270,7 @@ def ingest_frame(
         table_name: str,
         data_collection: str,
         url: str,
+        table_descr: str,
         conn_path: str,
         ingest_ts: str
 ):
@@ -282,6 +283,7 @@ def ingest_frame(
         table_name: logical table name (e.g., "dukes_1_1")
         data_collection: name of data collection
         url: source URL of the data
+        table_descr: string detailing the content of the parent table
         conn_path: path to SQLite DB
         ingest_ts: timestamp string to save into the ingest log table
 
@@ -303,10 +305,11 @@ def ingest_frame(
                 , data_collection
                 , table_name
                 , url
+                ,table_description
                 , success)
-            VALUES (?, ?, ?, ?, 0)
+            VALUES (?, ?, ?, ?, ?, 0)
             """,
-            (ingest_ts, data_collection, table_name, url)
+            (ingest_ts, data_collection, table_name, url, table_descr)
         )
 
         # get lastrowid
@@ -359,6 +362,7 @@ def raw_to_prod(
 
         SELECT
             log.ingest_ts
+            ,log.table_description
             ,data.*
         FROM 
             {table_prefix}_raw AS data
@@ -460,6 +464,8 @@ def insert_metadata(
         a pandas dataframe with metadata for table_name
 
     """
+
+    logging.debug("Getting data from staged table.")
     from_table = data_collection + "_prod"
     where = "table_name = ?"
 
@@ -472,13 +478,15 @@ def insert_metadata(
 
     # early return for empty dataframe
     if df.empty:
-        raise IntegrityError(f"No data found for {data_collection}, {table_name}. \nAn error has occurred when staging the data.")
+        raise sqlite3.IntegrityError(f"No data found for {data_collection}, {table_name}. \nAn error has occurred when staging the data.")
 
+    logging.debug("Dropping service columns.")
     df = df.dropna(axis=1, how="all")
-    df.drop(columns=["ingest_id", "ingest_ts"], inplace=True, errors="ignore")
+    df.drop(columns=["ingest_id", "ingest_ts", "table_description"], inplace=True, errors="ignore")
 
     df["data_collection"] = data_collection
 
+    logging.debug("Reshape metadata into long format.")
     metadata_df = pd.melt(
         df.head(1),
         id_vars=["data_collection", "table_name"],
@@ -486,7 +494,7 @@ def insert_metadata(
         value_name="temp"
     ).drop(columns="temp")
 
-    # column statistics
+    logging.debug("Calculate column stats.")
     metadata_df["n_non_nulls"] = (metadata_df["column_name"]
                                   .apply(lambda c: df[c].notna().sum()))
     metadata_df["n_unique"] = (metadata_df["column_name"]
@@ -494,7 +502,8 @@ def insert_metadata(
     metadata_df["dtype"] = (metadata_df["column_name"]
                             .apply(lambda c: schema_dict[data_collection][c]["type"]))
 
-    # Write to DB
+
+    logging.debug("Write to database.")
     with sqlite3.connect(conn_path) as conn:
         cursor = conn.cursor()
         cursor.execute("""
