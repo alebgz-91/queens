@@ -126,6 +126,7 @@ def remove_note_tags(text):
         text: text to parse
 
     Returns:
+        Cleaned string
 
     """
 

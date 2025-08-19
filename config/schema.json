@@ -33,6 +33,10 @@
       "type": "TEXT",
       "nullable": true
     },
+    "subcategory": {
+      "type": "TEXT",
+      "nullable": true
+    },
     "item": {
       "type": "TEXT",
       "nullable": true

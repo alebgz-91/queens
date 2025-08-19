@@ -62,15 +62,16 @@ def _postprocess_5_2(out_dict):
                         .str.replace("Total", "All"))
         df["year"] = (df["raw_idx"]
                       .apply(lambda s: s.split("(")[1].strip())
-                      .str.replace(")", "")
-                      .str.strip()
-                      .astype(int))
+                      .str.replace(")", "", regex=False)
+                      .str.strip())
         # remove compound index and add resulting variables
         index_cols.remove("raw_idx")
         index_cols.extend(["sector", "year"])
 
         df.set_index(index_cols, inplace=True)
         out[key] = df
+
+    return out
 
 
 def _postprocess_normalize_names(out_dict: dict):
