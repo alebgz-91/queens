@@ -644,12 +644,13 @@ def process_dukes_5_10(
     )
 
     logging.debug("Processing sheet B/C")
-    k, t = process_sheet_to_frame(
+    d_2 = process_sheet_to_frame(
         url=url,
         template_file_path=template_file_path,
         data_collection="dukes",
         sheet_names=["5.10.B and 5.10.C"]
     )
 
-    return {**d_1, "5.10.B_C": t}
+    return {**d_1,
+            "5.10.B_C": d_2["5.10.B and 5.10.C"]}
 

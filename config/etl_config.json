@@ -8,52 +8,58 @@
                     "table_name": "1.1"
                 }
             },
-
             "1.2": {
                 "f": "process_multi_sheets_to_frame",
                 "f_args": {
                     "table_name": "1.2"
                 }
             },
-
             "1.3": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["1.3.A", "1.3.B"]
+                    "sheet_names": [
+                        "1.3.A",
+                        "1.3.B"
+                    ]
                 }
             },
-
             "1.1.1": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["1.1.1.A", "1.1.1.B", "1.1.1.C"]
+                    "sheet_names": [
+                        "1.1.1.A",
+                        "1.1.1.B",
+                        "1.1.1.C"
+                    ]
                 }
             },
-
             "1.1.2": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["1.1.2"],
+                    "sheet_names": [
+                        "1.1.2"
+                    ],
                     "transpose_first": true
                 }
             },
-
             "1.1.3": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["1.1.3"],
+                    "sheet_names": [
+                        "1.1.3"
+                    ],
                     "transpose_first": true
                 }
             },
-
             "1.1.4": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["1.1.4"],
+                    "sheet_names": [
+                        "1.1.4"
+                    ],
                     "transpose_first": true
                 }
             },
-
             "1.1.5": {
                 "f": "process_multi_sheets_to_frame",
                 "f_args": {
@@ -66,22 +72,21 @@
                     "unit": "ktoe"
                 }
             },
-
             "1.1.6": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["1.1.6"],
+                    "sheet_names": [
+                        "1.1.6"
+                    ],
                     "transpose_first": true
                 }
             },
-
             "I.1": {
                 "f": "process_multi_sheets_to_frame",
                 "f_args": {
                     "table_name": "I.1"
                 }
             },
-
             "J.1": {
                 "f": "process_multi_sheets_to_frame",
                 "f_args": {
@@ -89,37 +94,40 @@
                 }
             }
         },
-
         "chapter_2": {
             "2.1": {
                 "f": "process_multi_sheets_to_frame",
                 "f_args": {
                     "table_name": "2.1",
-                    "skip_sheets": ["2.1"]
+                    "skip_sheets": [
+                        "2.1"
+                    ]
                 }
             },
-
             "2.2": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["2.2"]
+                    "sheet_names": [
+                        "2.2"
+                    ]
                 }
             },
-
             "2.3": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["2.3"]
+                    "sheet_names": [
+                        "2.3"
+                    ]
                 }
             },
-
             "2.4": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["2.4"]
+                    "sheet_names": [
+                        "2.4"
+                    ]
                 }
             },
-
             "2.7": {
                 "f": "process_multi_sheets_to_frame",
                 "f_args": {
@@ -130,7 +138,6 @@
                     "unit": "kt"
                 }
             },
-
             "2.8": {
                 "f": "process_multi_sheets_to_frame",
                 "f_args": {
@@ -141,20 +148,22 @@
                     "unit": "kt"
                 }
             },
-
             "2.1.1": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["2.1.1"],
+                    "sheet_names": [
+                        "2.1.1"
+                    ],
                     "transpose_first": true,
                     "has_multi_headers": true
                 }
             },
-
             "2.1.2": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["2.1.2"],
+                    "sheet_names": [
+                        "2.1.2"
+                    ],
                     "transpose_first": true
                 }
             }
@@ -175,25 +184,33 @@
             "3.3": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["3.3"]
+                    "sheet_names": [
+                        "3.3"
+                    ]
                 }
             },
             "3.4": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["3.4"]
+                    "sheet_names": [
+                        "3.4"
+                    ]
                 }
             },
             "3.5": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["3.5"]
+                    "sheet_names": [
+                        "3.5"
+                    ]
                 }
             },
             "3.6": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["3.6"]
+                    "sheet_names": [
+                        "3.6"
+                    ]
                 }
             },
             "3.7": {
@@ -215,33 +232,43 @@
             "3.1.1": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["3.1.1"],
+                    "sheet_names": [
+                        "3.1.1"
+                    ],
                     "transpose_first": true
                 }
             },
             "3.1.2": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["3.1.2"],
+                    "sheet_names": [
+                        "3.1.2"
+                    ],
                     "transpose_first": true
                 }
             },
             "E.1": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["E.1"]
+                    "sheet_names": [
+                        "E.1"
+                    ]
                 }
             },
             "F.3": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["F.3"]
+                    "sheet_names": [
+                        "F.3"
+                    ]
                 }
             },
             "F.4": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["F.4"]
+                    "sheet_names": [
+                        "F.4"
+                    ]
                 }
             }
         },
@@ -249,25 +276,33 @@
             "4.1": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["4.1"]
+                    "sheet_names": [
+                        "4.1"
+                    ]
                 }
             },
             "4.2": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["4.2"]
+                    "sheet_names": [
+                        "4.2"
+                    ]
                 }
             },
             "4.3": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["4.3"]
+                    "sheet_names": [
+                        "4.3"
+                    ]
                 }
             },
             "4.4": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["4.4a"],
+                    "sheet_names": [
+                        "4.4a"
+                    ],
                     "table_name": "4.4",
                     "ignore_mapping": true,
                     "id_var_position": 0,
@@ -278,15 +313,22 @@
             "4.5": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["4.5a"],
-                    "drop_cols": ["Pipeline/ LNG", "Country of origin/ destination"],
+                    "sheet_names": [
+                        "4.5a"
+                    ],
+                    "drop_cols": [
+                        "Pipeline/ LNG",
+                        "Country of origin/ destination"
+                    ],
                     "table_name": "4.5"
                 }
             },
             "4.6": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["4.6"],
+                    "sheet_names": [
+                        "4.6"
+                    ],
                     "ignore_mapping": true,
                     "id_var_position": 0,
                     "id_var_name": "item",
@@ -296,7 +338,9 @@
             "F.2": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["F.2"],
+                    "sheet_names": [
+                        "F.2"
+                    ],
                     "table_name": "F.2"
                 }
             }
@@ -310,79 +354,168 @@
                 "f": "process_sheet_to_frame",
                 "f_args": {
                     "table_name": "5.2",
-                    "sheet_names": ["5.2"],
+                    "sheet_names": [
+                        "5.2"
+                    ],
                     "var_to_melt": "raw_idx"
                 }
             },
             "5.3": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["5.3"],
-                    "drop_cols": ["Fuel"]
+                    "sheet_names": [
+                        "5.3"
+                    ],
+                    "drop_cols": [
+                        "Fuel"
+                    ]
                 }
             },
             "5.4": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["5.4", "5.4.A"],
-                    "drop_cols": ["Fuel used, Generation or Consumption"]
+                    "sheet_names": [
+                        "5.4",
+                        "5.4.A"
+                    ],
+                    "drop_cols": [
+                        "Fuel used, Generation or Consumption"
+                    ]
                 }
             },
             "5.5": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
-                    "sheet_names": ["5.5"]
+                    "sheet_names": [
+                        "5.5"
+                    ]
                 }
             },
             "5.6": {
                 "f": "process_dukes_5_6",
                 "f_args": {}
-            }
-        },
-        "5.7": {
-            "f": "process_sheet_to_frame",
-            "f_args": {
-                "sheet_names": ["5.7"],
-                "drop_cols": ["Fuel"]
-            }
-        },
-        "5.8": {
-            "f": "process_sheet_to_frame",
-            "f_args": {
-                "sheet_names": ["5.8"],
-                "drop_cols": ["Fuel"]
-            }
-        },
-        "5.9": {
-            "f": "process_sheet_to_frame",
-            "f_args": {
-                "sheet_names": ["5.9"],
-                "ignore_mapping": true,
-                "id_var_position": 0,
-                "id_var_name": "sector",
-                "unit": "MW"
-            }
-        },
-        "5.10": {
-            "f": "process_dukes_5_10",
-            "f_args": {}
-        },
-        "5.12": {
+            },
+            "5.7": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "sheet_names": [
+                        "5.7"
+                    ],
+                    "drop_cols": [
+                        "Fuel"
+                    ]
+                }
+            },
+            "5.8": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "sheet_names": [
+                        "5.8"
+                    ],
+                    "drop_cols": [
+                        "Fuel"
+                    ]
+                }
+            },
+            "5.9": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "sheet_names": [
+                        "5.9"
+                    ],
+                    "ignore_mapping": true,
+                    "id_var_position": 0,
+                    "id_var_name": "sector",
+                    "unit": "MW"
+                }
+            },
+            "5.10": {
+                "f": "process_dukes_5_10",
+                "f_args": {}
+            },
+            "5.12": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "sheet_names": ["5.12"],
+                    "drop_cols": ["Generator type"]
+                }
+            },
 
+            "5.13": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "sheet_names": ["5.13"],
+                    "transpose_first": true
+                }
+            },
+            "5.14": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "sheet_names": [
+                        "5.14"
+                    ],
+                    "ignore_mapping": true,
+                    "id_var_position": 0,
+                    "id_var_name": "fuel",
+                    "unit": "t of CO2 / GWh supplied"
+                }
+            },
+            "5.15": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "sheet_names": ["5.15"],
+                    "drop_cols": ["Measure"]
+                }
+            },
+            "5.16": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "sheet_names": ["5.16"]
+                }
+            },
+            "5.1.1": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "sheet_names": ["5.1.1"],
+                    "ignore_mapping": true,
+                    "var_to_melt": "fuel",
+                    "id_var_position": 0,
+                    "id_var_name": "year",
+                    "unit": "Mtoe"
+                }
+            },
+            "5.1.2": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "sheet_names": ["5.1.2"],
+                    "ignore_mapping": true,
+                    "var_to_melt": "item",
+                    "id_var_position": 0,
+                    "id_var_name": "year",
+                    "unit": "TWh"
+                }
+            },
+            "5.1.3": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "sheet_names": ["5.1.3"],
+                    "transpose_first": true
+                }
+            }
         },
-        "5.13": {
-
-        },
-        "5.14": {
-            "f": "process_sheet_to_frame",
-            "f_args": {
-                "sheet_names": ["5.14"],
-                "ignore_mapping": true,
-                "id_var_position": 0,
-                "id_var_name": "fuel",
-                "unit": "t of CO2 / GWh supplied"
+        "chapter_6": {
+            "6.1": {
+                "f": "process_multi_sheets_to_frame",
+                "f_args": {
+                    "table_name": "6.1"
+                }
+            },
+            "6.2": {
+                "f": "process_sheet_to_frame",
+                "f_args": {
+                    "sheet_names": ["6.2"]
+                }
             }
         }
     }
-
 }
