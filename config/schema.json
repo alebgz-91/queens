@@ -50,7 +50,7 @@
       "nullable": true
     },
     "region": {
-      "type": "TECT",
+      "type": "TEXT",
       "nullable": true
     },
     "sector": {
