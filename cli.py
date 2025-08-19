@@ -91,6 +91,8 @@ def ingest(
         else:
             typer.echo(f"Updating all tables in {collection}...")
             ingest_all_tables(data_collection=collection)
+        typer.echo("Ingestion process completed with success.")
+
     except Exception as e:
         typer.echo(f"ERROR - execution terminated: {e}")
 
@@ -107,6 +109,8 @@ def stage(
         typer.echo(f"Staging {collection} data...")
         stage_data(data_collection=collection,
                    as_of_date=as_of_date)
+        typer.echo(f"Data for {collection} staged successfully.")
+
     except Exception as e:
         typer.echo(f"An error occurred when staging data: \n{e}")
 
