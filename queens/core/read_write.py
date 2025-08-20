@@ -1,12 +1,11 @@
 import sqlite3
 import pandas as pd
-from pyodbc import IntegrityError
 
-import config.settings as s
+from queens import settings as s
 import os
 import logging
 import datetime
-import core.utils as u
+import queens.core.utils as u
 
 
 def read_and_wrangle_wb(
