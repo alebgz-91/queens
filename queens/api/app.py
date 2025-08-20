@@ -24,10 +24,13 @@ app = f.FastAPI(title="QUEENS API")
 # -----------------
 
 @app.on_event("startup")
-def _startup_logging():
-    # Log API events to a separate file; no console to avoid double-logs with uvicorn
+def _startup_logging()-> None:
+    """
+    Set up API logger.
+    """
     s.setup_logging(to_console=False, to_file=True, file_name="queens_api.log")
     logging.getLogger(__name__).info("QUEENS API started.")
+
 
 @app.get("/data/{collection}")
 @app.get("/{collection}")
@@ -46,7 +49,7 @@ def get_data(
     limit: int = f.Query(DEFAULT_LIMIT, ge=1, description=f"Max rows per page (<= {MAX_LIMIT})"),
     cursor: Optional[int] = f.Query(None, description="Pagination cursor (internal rowid); return rows with rowid > cursor"),
 
-):
+)-> dict:
     """
     Return rows from `{collection}_prod` filtered by `table_name` + optional filters.
     Cursor pagination: results are ordered by internal `rowid`. Pass back `next_cursor` from the
@@ -55,37 +58,40 @@ def get_data(
     """
 
     try:
-        # verify existence of input
+        logging.debug("Checking existence of data collection and table name.")
         u.check_inputs(
             data_collection=collection,
             table_name=table_name,
             etl_config=s.ETL_CONFIG)
 
     except NameError as e:
-        # unknown data collection
+        logging.error(f"Unknown data collection or table: {collection} {table_name}")
         raise f.HTTPException(status_code=404, detail=str(e))
 
     # parse filters (string to dict)
     try:
+        logging.debug("Parsing filter JSON string.")
         filters_dict = json.loads(filters) if filters else {}
     except json.JSONDecodeError as e:
-        # malformed filter string
+        logging.error("Malformed filter string")
         raise f.HTTPException(status_code=400, detail=str(e))
 
     # normalise filters
     try:
+        logging.debug("Validating filters.")
         base_raw, or_raw = vld.normalize_filters(filters_dict)
 
         # validate+cast each group
         base = vld.validate_query_filters(collection, table_name, base_raw, s.DB_PATH, s.SCHEMA)
         ors = [vld.validate_query_filters(collection, table_name, g,s.DB_PATH, s.SCHEMA) for g in or_raw]
     except (KeyError, ValueError, TypeError, NameError) as e:
-        # invalid columns, operators or value passed
+        logging.error("Invalid columns, operators or value passed")
         raise f.HTTPException(status_code=422, detail=str(e))
 
     # build WHERE
     base["table_name"] = {"eq": table_name}
     try:
+        logging.debug("Building where clause.")
         schema_dict = s.SCHEMA[collection]
         where_sql, query_params = u.build_where_clause(
             base,
@@ -94,19 +100,21 @@ def get_data(
             schema_dict
         )
     except Exception as e:
+        logging.error("Error while generating WHERE clause: " + str(e))
         raise f.HTTPException(status_code=422, detail=str(e))
 
+    # cap maximum response length
     limit = min(int(limit), MAX_LIMIT)
 
     # final query
     try:
-        # extend where for cursor
+        logging.debug("Generate query and read data from DB.")
         where_curs = where_sql
         if cursor is not None:
             where_curs = f"({where_sql}) AND (rowid > ?)"
             query_params.append(int(cursor))
 
-        # order records by implicit rowid
+        # generate the query
         query = u.generate_select_sql(
             cols=["rowid", "*"],
             from_table=f"{collection}_prod",
@@ -117,8 +125,6 @@ def get_data(
 
         # add limit to parameters
         query_params.append(limit)
-        print(query)
-        print(query_params)
 
         df = read_sql_as_frame(
             conn_path=s.DB_PATH,
@@ -126,8 +132,10 @@ def get_data(
             query_params=tuple(query_params)
         )
     except (sqlite3.OperationalError, sqlite3.DatabaseError) as e:
+        logging.error("Database error: " + str(e))
         raise f.HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:
+        logging.error("Unexpected error: " + str(e))
         raise f.HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
     if df is None or df.empty:
@@ -162,7 +170,7 @@ def get_data(
 def get_metadata(
         collection: str,
         table_name: str
-):
+)-> dict:
 
     try:
         # verify existence of input
@@ -172,7 +180,7 @@ def get_metadata(
             etl_config=s.ETL_CONFIG)
 
     except NameError as e:
-        # unknown data collection
+        logging.error("Unknown data collection or table name")
         raise f.HTTPException(status_code=404, detail=str(e))
 
     try:
@@ -186,8 +194,10 @@ def get_metadata(
             query_params=(collection, table_name)
         )
     except (sqlite3.OperationalError, sqlite3.DatabaseError) as e:
+        logging.error("Database error: " + str(e))
         raise f.HTTPException(status_code=500, detail=f"Database error: {e}")
     except Exception as e:
+        logging.error("Unexpected error: " + str(e))
         raise f.HTTPException(status_code=500, detail=f"Unexpected error: {e}")
 
     return df.to_dict(orient="records")
