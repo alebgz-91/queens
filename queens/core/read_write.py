@@ -1,11 +1,12 @@
 import sqlite3
 import pandas as pd
-
-from queens import settings as s
-import os
 import logging
 import datetime
-import queens.core.utils as u
+import os
+from typing import Union
+from pathlib import Path
+from queens import settings as s
+from queens.core import utils as u
 
 
 def read_and_wrangle_wb(
@@ -14,7 +15,7 @@ def read_and_wrangle_wb(
         sheet_name: str = None,
         skip_sheets: list = None,
         fixed_header: int = None
-):
+)-> Union[pd.DataFrame, dict]:
 
     """
     Read Excel workbooks removing unnecessary header rows.
@@ -99,9 +100,9 @@ def export_table(
         data_collection: str,
         file_type: str,
         table_name: str,
-        output_path: str,
+        output_path: Union[str, Path],
         output_ts: str = None
-):
+)-> None:
     """
     Utility that can export a specific table_name within a data_collection to
     flat files. Supports csv, parquet and Excel (xlsx)
@@ -156,6 +157,7 @@ def export_table(
 
     except Exception as e:
         logging.error(f"Export failed for {data_collection} {table_name}: \n{e}")
+        raise e
 
     logging.info(f"Successfully created {output_path + file_name}")
 
@@ -163,9 +165,9 @@ def export_table(
 def export_all(
         data_collection: str,
         file_type: str,
-        output_path: str,
+        output_path: Union[str, Path],
         bulk_export: bool
-):
+)-> None:
     """
     Export all table sin a given data_collection to flat files. Supports csv, parquet and Excel file types.
     Tables can either be saved as individual files (bulk = False, the default) or
@@ -178,6 +180,7 @@ def export_all(
         bulk_export: if True, exports all tables into a single file. Default is False
 
     Returns:
+        None
 
     """
 
@@ -237,12 +240,13 @@ def export_all(
 
     except Exception as e:
         logging.error(f"Export failed for {table_name}: \n{e}")
+        raise e
 
 
 def execute_sql(
-        conn_path: str,
+        conn_path: Union[str, Path],
         sql: str
-):
+)-> None:
     """
     Executes a SQL statement with optional parameters.
 
@@ -270,9 +274,9 @@ def ingest_frame(
         data_collection: str,
         url: str,
         table_descr: str,
-        conn_path: str,
+        conn_path: Union[str, Path],
         ingest_ts: str
-):
+)-> int:
     """
     Ingests a pandas dataframe and saves an ingest log entry.
 
@@ -337,10 +341,22 @@ def ingest_frame(
 
 
 def raw_to_prod(
-        conn_path: str,
+        conn_path: Union[str, Path],
         table_prefix: str,
         cutoff: str
-):
+)-> None:
+    """
+    Moves the data from raw to prod table, selecting the most recent version of each record
+    that alre older than the cutoff provided.
+    Args:
+        conn_path: Database path
+        table_prefix: data collection name
+        cutoff: the date as of which we want to stage data
+
+    Returns:
+        None
+
+    """
     staging_query = f"""
 
         CREATE TABLE {table_prefix}_prod AS
@@ -392,10 +408,10 @@ def raw_to_prod(
 
 
 def read_sql_as_frame(
-        conn_path: str,
+        conn_path: Union[str, Path],
         query: str,
         query_params: tuple = None
-):
+)-> pd.DataFrame:
     """
     A wrapper of pd.read_sql_query(), reading custom SQL queries from
     a database located in conn_str. Supports parametrised queries with positional
@@ -417,13 +433,16 @@ def read_sql_as_frame(
 
     return df
 
-def table_exists(table_name: str, conn_path: str) -> bool:
+def table_exists(
+        table_name: str,
+        conn_path: Union[str, Path]
+) -> bool:
     """
     Check if a table exists in the SQLite database.
 
     Args:
-        table_name (str): Name of the table to check.
-        conn_path (str): Path to the SQLite database.
+        table_name: Name of the table to check.
+        conn_path: Path to the SQLite database.
 
     Returns:
         bool: True if table exists, False otherwise.
@@ -448,9 +467,9 @@ def table_exists(table_name: str, conn_path: str) -> bool:
 def insert_metadata(
         data_collection: str,
         table_name: str,
-        conn_path: str,
+        conn_path: Union[str, Path],
         schema_dict: dict
-):
+)-> pd.DataFrame:
     """
     Reads slice of _prod table and generates metadata for the slice
     Args:
@@ -516,9 +535,10 @@ def insert_metadata(
 
 
 def load_column_info(
-        conn_path: str,
+        conn_path: Union[str, Path],
         data_collection: str,
-        table_name: str):
+        table_name: str
+)-> Union[dict, callable]:
 
     # expects metadata table with columns: column_name, dtype
     query = u.generate_select_sql(
@@ -528,7 +548,7 @@ def load_column_info(
     )
     meta = read_sql_as_frame(
         conn_path,
-        query,
+        query=query,
         query_params=(data_collection, table_name)
     )
 
