@@ -5,11 +5,12 @@ os.environ.setdefault("NUMEXPR_NUM_THREADS", "8")
 import sqlite3
 import fastapi as f
 from typing import Optional
+from contextlib import asynccontextmanager
 import logging
 import queens.core.utils as u
 import json
-import queens.etl.validation as vld
 
+from queens.etl import validation as vld
 from queens.core.read_write import read_sql_as_frame
 from queens import settings as s
 
@@ -17,20 +18,25 @@ DEFAULT_LIMIT = 1000
 MAX_LIMIT = 5000
 
 
-app = f.FastAPI(title="QUEENS API")
-
-# -----------------
-# startup
-# -----------------
-
-@app.on_event("startup")
-def _startup_logging()-> None:
+@asynccontextmanager
+async def lifespan(a: f.FastAPI):
     """
     Set up API logger.
     """
     s.setup_logging(to_console=False, to_file=True, file_name="queens_api.log")
     logging.getLogger(__name__).info("QUEENS API started.")
 
+    yield
+
+
+app = f.FastAPI(
+    title="QUEENS API",
+    lifespan=lifespan
+)
+
+# -----------------
+# startup
+# -----------------
 
 @app.get("/data/{collection}")
 @app.get("/{collection}")
