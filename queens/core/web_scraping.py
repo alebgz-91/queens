@@ -3,7 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 
 
-def _get_dukes_urls(url):
+def _get_dukes_urls(url: str)-> dict
     """
     Scrapes GOV.UK for links to DUKES Excel tables, extracting their numbers and URLs.
 
@@ -55,7 +55,7 @@ SCRAPERS_MAP = {
 }
 
 
-def scrape_urls(data_collection: str, url: str):
+def scrape_urls(data_collection: str, url: str)-> dict:
     """
     Scrape the table urls from the given chapter page
     Args:

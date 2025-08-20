@@ -78,10 +78,11 @@ OP_SQL = {
     }
 
 # ---------------------------------------------------------------------
-# Resolve resources
+# Resolve resources, handling different python versions
 # ---------------------------------------------------------------------
 try:
-    from importlib.resources import files, as_file  # Python 3.9+
+    # Python 3.9+
+    from importlib.resources import files, as_file
 except Exception:
     files = None  # type: ignore[assignment]
     as_file = None  # type: ignore[assignment]

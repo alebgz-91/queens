@@ -2,8 +2,10 @@ import json
 import inspect
 import os.path
 import re
+from pathlib import Path
+from typing import Union, Tuple
 
-def parse_json(path: str):
+def parse_json(path: Union[str, Path])-> dict:
     """
     Opens a .json file and loads into a dictionary
 
@@ -25,7 +27,7 @@ def parse_json(path: str):
         raise ValueError(f"Invalid JSON format in {path}: {e}")
 
 
-def table_to_chapter(table_number, data_collection):
+def table_to_chapter(table_number, data_collection)-> str:
     """
     Utility that returns a chapter key for a given table number. Can handle either raw table names
     (i.e. "1.2.3") or table keys (i.e. "dukes_1_2_3").
@@ -53,7 +55,7 @@ def table_to_chapter(table_number, data_collection):
             raise NotImplementedError("Work in process.")
 
 
-def check_path(file_path: str):
+def check_path(file_path: Union[str, Path])-> bool:
     """
     checks if a file path exists and throws an exception if not.
     Args:
@@ -68,10 +70,14 @@ def check_path(file_path: str):
     if not os.path.exists(abs_path):
         raise FileNotFoundError(f"The specified path does not exist: {file_path}")
 
+    return True
 
-def check_inputs (data_collection: str,
-                  etl_config: dict,
-                  table_name: str = None):
+
+def check_inputs (
+        data_collection: str,
+        etl_config: dict,
+        table_name: str = None
+)-> bool:
     """
     Function that checks if a table is found in the ETL_CONFIG file
     Args:
@@ -100,7 +106,8 @@ def check_inputs (data_collection: str,
 
 def call_func(
         func: callable,
-        args_dict: dict):
+        args_dict: dict
+):
     """
     Call a function on a set of parameters, excluding unnecessary ones.
 
@@ -123,7 +130,7 @@ def call_func(
     return func(**filtered_args)
 
 
-def remove_note_tags(text):
+def remove_note_tags(text: str)-> str:
     """
     Remove notes indications of the type [note x] or [Note x]
     Args:
@@ -145,7 +152,8 @@ def remove_note_tags(text):
 def generate_create_table_sql(
         table_prefix: str,
         table_env: str,
-        schema_dict: dict) -> str:
+        schema_dict: dict
+) -> str:
     """
     Function that generates a SQL query string for creating a table
     with prescribed schema.
@@ -180,7 +188,7 @@ def generate_create_table_sql(
     return create_table
 
 
-def generate_create_log_sql():
+def generate_create_log_sql()-> str:
     sql = """
         CREATE TABLE IF NOT EXISTS [_ingest_log] (\n
             ingest_id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -195,7 +203,7 @@ def generate_create_log_sql():
     return sql
 
 
-def generate_create_metadata_sql():
+def generate_create_metadata_sql()-> str:
     query = """
         CREATE TABLE IF NOT EXISTS [_metadata] (\n
             [data_collection]     TEXT    NOT NULL,
@@ -217,7 +225,7 @@ def generate_select_sql(
         order_by: list = None,
         limit: bool = False,
         distinct: bool = False
-):
+)-> str:
     """
     Generate a basic SELECT statement with custom WHERE clause. Options available
     to select distinct values and specify columns to include in the result set.
@@ -251,7 +259,7 @@ def generate_select_sql(
 
     return query
 
-def to_nested(d: dict):
+def to_nested(d: dict)-> dict:
     """
     Converts a dictionary in flat format {k : v,...} to a nested disct of the form {k : {"eq" : v}}
     Also maintains existing nesting (i.e. {k : {op: v}} is left untouched.
@@ -275,7 +283,7 @@ def build_sql_for_group(
         group: dict,
         operator_map: dict,
         schema_dict: dict
-):
+)-> Tuple[str, list]:
     """
     group: {col: {op: value, ...}, ...}
     Combine operatos for a field with AND; combine fields with AND.
@@ -300,7 +308,7 @@ def build_where_clause(
         or_groups: list[dict],
         operator_map: dict,
         schema_dict: dict
-):
+)-> Tuple[str, list]:
     """
     (base AND) AND ( OR-group )  ; OR-group is OR of group SQLs
     """
