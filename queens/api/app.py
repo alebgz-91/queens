@@ -1,20 +1,33 @@
-import sqlite3
+import os
+# silence numexpr message when importing pandas
+os.environ.setdefault("NUMEXPR_NUM_THREADS", "8")
 
+import sqlite3
 import fastapi as f
 from typing import Optional
-import core.utils as u
+import logging
+import queens.core.utils as u
 import json
-import etl.validation as vld
+import queens.etl.validation as vld
 
-from core.read_write import read_sql_as_frame
-import config.settings as s
+from queens.core.read_write import read_sql_as_frame
+from queens import settings as s
 
 DEFAULT_LIMIT = 1000
 MAX_LIMIT = 5000
 
 
-app = f.FastAPI(title="UK Energy Data API")
+app = f.FastAPI(title="QUEENS API")
 
+# -----------------
+# startup
+# -----------------
+
+@app.on_event("startup")
+def _startup_logging():
+    # Log API events to a separate file; no console to avoid double-logs with uvicorn
+    s.setup_logging(to_console=False, to_file=True, file_name="queens_api.log")
+    logging.getLogger(__name__).info("QUEENS API started.")
 
 @app.get("/data/{collection}")
 @app.get("/{collection}")

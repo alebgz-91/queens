@@ -1,8 +1,8 @@
-import etl.validation as ts
-import core.read_write as rw
-import core.utils as u
-import etl.transformations as tr
-import config.settings as s
+from queens.etl import validation as vld
+from queens.core import read_write as rw
+from queens.core import utils as u
+from queens.etl import transformations as tr
+from queens import settings as s
 import logging
 import datetime
 import pandas as pd
@@ -30,8 +30,7 @@ def ingest_tables(
     if ingest_ts is None:
         ingest_ts = datetime.datetime.now().isoformat()
 
-    try:
-        # this is run only after initialization so all tables exist
+    try:        # this is run only after initialization so all tables exist
         # and we can process data safely
         for table in table_list:
 
@@ -44,7 +43,7 @@ def ingest_tables(
 
             # generate config dictionary
             logging.info(f"Getting config for table: {table}")
-            config = ts.generate_config(
+            config = vld.generate_config(
                 data_collection=data_collection,
                 table_name=table,
                 chapter_key=chapter_key,
@@ -65,7 +64,7 @@ def ingest_tables(
             # placeholder for the time being: return results
             for table_sheet in res:
                 logging.info(f"Validating schema for {table_sheet}")
-                df = ts.validate_schema(
+                df = vld.validate_schema(
                     data_collection=data_collection,
                     table_name=table_sheet,
                     df=res[table_sheet],
@@ -309,8 +308,11 @@ def get_data_info(
     df["Ingest time"] = df["ingest_ts"].dt.time
     df["Ingest date"] = df["ingest_ts"].dt.date
 
-    df = df.rename(columns={"table_name": "Table number"})
-    df = df.groupby(["Table number", "Ingest date", "Ingest time"])["year"].agg([
+    df = df.rename(columns={
+        "table_name": "Table number",
+        "table_description": "Description"
+    })
+    df = df.groupby(["Table number", "Description", "Ingest date", "Ingest time"])["year"].agg([
         ("Min. year", "min"),
         ("Max. year", "max"),
         ("Row count", "count")

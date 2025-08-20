@@ -1,23 +1,18 @@
+import os
+# Silence numexpr banner before anything imports pandas/numexpr
+os.environ.setdefault("NUMEXPR_NUM_THREADS", "8")
+
 import typer
 from typing import Optional, List
 import logging
 from tabulate import tabulate
+import pandas as pd
 import uvicorn
 
-# enable logging
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    handlers=[
-        logging.FileHandler("data/logs/etl.log"),
-        logging.StreamHandler()
-    ]
-)
-
-from etl.bootstrap import initialize, is_staged
-from etl.process import *
-import core.read_write as rw
-import config.settings as s
+from queens import settings as s
+from queens.etl.bootstrap import initialize, is_staged
+from queens.etl.process import *
+import queens.core.read_write as rw
 
 app = typer.Typer()
 
@@ -25,10 +20,14 @@ app = typer.Typer()
 def auto_startup(ctx: typer.Context):
     """
     Initialise DB tables only for commands that write or expect tables to exist.
+    Also configures logging once (file + console).
     """
-    # only certain commands require auto-startup
-    commands_requiring_init = {"ingest", "stage", "export", "serve"}
+    # configure logging once for any CLI invocation
+    s.setup_logging(file_name="queens_cli.log",
+                    level="debug")
 
+    # only certain commands require auto-startup
+    commands_requiring_init = {"ingest", "stage", "info", "export", "serve"}
     if ctx.invoked_subcommand in commands_requiring_init:
         created = initialize(db_path=s.DB_PATH, schema=s.SCHEMA)
         if created:
@@ -39,39 +38,29 @@ def auto_startup(ctx: typer.Context):
 
 @app.command()
 def config(
-    db_path: str = typer.Option(None, help="Set path to SQLite DB"),
-    export_path: str = typer.Option(None, help="Set export directory"),
-    show_current: bool = typer.Option(False, "--show-current", help="Show current settings")
-
+    db_path: Optional[str] = typer.Option(None, "--db-path"),
+    export_path: Optional[str] = typer.Option(None, "--export-path"),
+    show_current: bool = typer.Option(False, "--show-current")
 ):
+    import queens.settings as s
 
-    config_file = "config/config.ini"
     if show_current:
+        typer.echo(f"User dir:    {s.USER_DIR}")
+        typer.echo(f"DB path:     {s.DB_PATH}")
+        typer.echo(f"Export dir:  {s.EXPORT_DIR}")
+        typer.echo(f"Templates:   {s.TEMPLATES_DIR}")
+        raise typer.Exit(code=0)
 
-        typer.echo("Current configuration:")
-        typer.echo(f"Database path: {s.DB_PATH}")
-        typer.echo(f"Export path: {s.EXPORT_PATH}")
-        raise typer.Exit()
+    if (db_path is None) and (export_path is None):
+        typer.echo("Nothing to change. Use --db-path and/or --export-path or --show-current.")
+        raise typer.Exit(code=0)
 
-    # update the config file if any parameters are passed and are valid
     try:
-        updated = False
-        if db_path:
-            s.config_ini["DATABASE"]["db_path"] = db_path
-            updated = True
-        if export_path:
-            u.check_path(export_path)
-            s.config_ini["EXPORT"]["export_path"] = export_path
-            updated = True
-
-        # save new configs
-        if updated:
-            with open(config_file, "w") as f:
-                s.config_ini.write(f)
+        s.set_config(db_path=db_path, export_path=export_path)
+        typer.echo("Configuration updated.")
     except Exception as e:
-        typer.echo(f"Error: {e}")
-
-
+        typer.echo(f"Error updating config: {e}")
+        raise typer.Exit(code=1)
 
 
 @app.command()
@@ -177,7 +166,7 @@ def export(
         collection: str,
         file_type: Optional[str] = typer.Option("csv", "--file-type", "-f", help="Format to use for export. Options are csv, parquet or xlsx, default is xsc"),
         table: Optional[str] = typer.Option(None, "--table", "-t", help="Optional table name to download"),
-        path: Optional[str] = typer.Option(s.EXPORT_PATH, "--path", "-p", help="Optional destination path"),
+        path: Optional[str] = typer.Option(s.EXPORT_DIR, "--path", "-p", help="Optional destination path"),
         bulk: Optional[bool] = typer.Option(False, "--bulk", "-b", help="Whether to save all the data in a single file or not")
 ):
     # interrupt if data colleciton is not staged
@@ -242,26 +231,21 @@ def serve(
 
     # start API (uvicorn)
     try:
-        config = uvicorn.Config(
-            app="api.app:app",
+        server_config = uvicorn.Config(
+            app="queens.api.app:app",  # <-- package-qualified
             host=host,
             port=port,
             reload=reload,
             log_level=log_level,
         )
-        server = uvicorn.Server(config)
-
+        server = uvicorn.Server(server_config)
         typer.echo(f"Starting API at http://{host}:{port} (reload={reload})")
-
-        # Blocking call; returns when server stops
         server.run()
-
-        # if server failed to start:
         if not server.started and not server.should_exit:
             typer.echo("Uvicorn did not start (unknown state).")
             raise typer.Exit(code=1)
 
-        # normal stop
+        # normal exit
         raise typer.Exit(code=0)
 
     except KeyboardInterrupt:

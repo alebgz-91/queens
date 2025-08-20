@@ -1,8 +1,8 @@
+import queens.core.web_scraping as ws
 import pandas as pd
-from config.settings import DTYPES, VALID_OPS
-import core.web_scraping as ws
-import core.utils as u
-import core.read_write as rw
+from queens import settings as s
+import queens.core.utils as u
+import queens.core.read_write as rw
 import logging
 
 def generate_config(data_collection: str,
@@ -44,7 +44,8 @@ def generate_config(data_collection: str,
 
     # determine the template file path
     logging.debug("Fetch template path")
-    template_file_path = templates[data_collection][chapter_key]
+    template_file_name = templates[data_collection][chapter_key]
+    template_file_path = s.TEMPLATES_DIR / template_file_name
 
     # add url, template_path and data_collection to f_args
     config["f_args"].update({
@@ -88,7 +89,7 @@ def validate_schema(
         exp_dtype = schema[col_name]["type"]
         exp_null = schema[col_name]["nullable"]
 
-        if DTYPES[exp_dtype] is float:
+        if s.DTYPES[exp_dtype] is float:
             df[col_name] = pd.to_numeric(df[col_name],
                                          errors="coerce")
 
@@ -99,11 +100,11 @@ def validate_schema(
             if non_null_count == 0:
                 raise ValueError(f"Values cannot be parse to numeric data. Check transformator for table {data_collection} {table_name}.")
 
-        elif DTYPES[exp_dtype] is int:
+        elif s.DTYPES[exp_dtype] is int:
             df[col_name] = pd.to_numeric(df[col_name],
                                              errors="coerce",
                                              downcast="integer")
-        elif DTYPES[exp_dtype] is str:
+        elif s.DTYPES[exp_dtype] is str:
             df[col_name] = df[col_name].astype(str)
 
         else:
@@ -192,7 +193,7 @@ def validate_query_filters(
         # validate the operators for each condition
     for col, ops in group.items():
         sql_t = sql_types[col]
-        allowed = VALID_OPS.get(sql_t)
+        allowed = s.VALID_OPS.get(sql_t)
         # adding this to facilitate debug
         if not allowed:
             raise ValueError(f"No operator policy for SQL type '{sql_t}' (column '{col}').")

@@ -3,8 +3,8 @@ import re
 
 import numpy as np
 
-from core.read_write import read_and_wrangle_wb
-from core.utils import remove_note_tags
+from queens.core.read_write import read_and_wrangle_wb
+from queens.core.utils import remove_note_tags
 import pandas as pd
 
 def _postprocess_1_1_5(out_dict: dict):
