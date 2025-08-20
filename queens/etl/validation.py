@@ -1,19 +1,24 @@
-import queens.core.web_scraping as ws
 import pandas as pd
-from queens import settings as s
-import queens.core.utils as u
-import queens.core.read_write as rw
 import logging
+from typing import Union, Tuple
+from pathlib import Path
+from queens import settings as s
+from queens.core import web_scraping as ws
+from queens.core import utils as u
+from queens.core import read_write as rw
 
-def generate_config(data_collection: str,
-                    table_name: str,
-                    chapter_key: str,
-                    templates: dict,
-                    urls: dict,
-                    etl_config: dict):
+
+def generate_config(
+        data_collection: str,
+        table_name: str,
+        chapter_key: str,
+        templates: dict,
+        urls: dict,
+        etl_config: dict
+)-> dict:
     """
-    Generates a dictionary with all necessary information for the ETL to run properly on a table.
-    This requires environment variables to be set correctly in the config/ directory.
+    Resolves table-specific processing parameters and packages them as a dictionary.
+
     Args:
         data_collection: the collection the table belongs to
         table_name: table number
@@ -64,26 +69,49 @@ def validate_schema(
         table_name: str,
         df: pd.DataFrame,
         schema_dict: dict
-):
+)-> pd.DataFrame:
+    """
+    Enforces schema constraints to a given table.
+    Args:
+        data_collection: the parent data collection
+        table_name: ID of the table to validate
+        df: the pandas dataframe of the table
+        schema_dict: dictionary storing schema information
+
+    Returns:
+        the validated dataframe
+    """
 
     # check for duplicates
     logging.debug("Starting schema validation")
+
+    # reset the index to inspect all columns
+    index_cols = list(df.index.names)
+    df.reset_index(drop=False, inplace=True)
+
+    # remove working columns that are not meant to provide a unique index
+    for col in ["row", "label"]:
+        if col not in index_cols:
+            raise ValueError(f"Required column missing in table {table_name}: {col}")
+        index_cols.remove(col)
+
+    # re-set index with meaningful columns
+    df.set_index(index_cols, inplace=True)
     if df.index.duplicated().sum() > 0:
         raise ValueError(f"There are duplicates in table {table_name} of data collection {data_collection}. Check mapping table.")
 
+    df.reset_index(drop=False, inplace=True)
     schema = schema_dict[data_collection]
 
-    # Add constant index columns
-    df.reset_index(drop=False, inplace=True)
-
-
-    # add id cols as a column                               data_collection=data_collection)
+    # Add constant index columns                               data_collection=data_collection)
     df["table_name"] = table_name
 
     logging.debug("Check data types for each columns")
     for col_name in df:
 
+        logging.debug(f"Validating column {col_name}.")
         if col_name not in schema:
+            logging.error(f"Unexpected column not in schema for table {table_name}: {col_name}")
             raise ValueError(f"Unexpected column not in schema for table {data_collection} {table_name}: {col_name}")
 
         exp_dtype = schema[col_name]["type"]
@@ -98,6 +126,7 @@ def validate_schema(
             # but there should be non-null values
             non_null_count = df[col_name].notnull().sum()
             if non_null_count == 0:
+                logging.error(f"Conversion to float failed: too many NULLs in column {col_name}")
                 raise ValueError(f"Values cannot be parse to numeric data. Check transformator for table {data_collection} {table_name}.")
 
         elif s.DTYPES[exp_dtype] is int:
@@ -107,23 +136,21 @@ def validate_schema(
         elif s.DTYPES[exp_dtype] is str:
             df[col_name] = df[col_name].astype(str)
 
-        else:
-            # no action for now, will likely need to handle further types
-            pass
+        # can implement further data types in the future
 
         # check nulls
         n_rows = len(df)
         n_non_nulls = df[col_name].notnull().sum()
         if (n_rows > n_non_nulls) and (not exp_null):
-            raise ValueError(f"Column {col_name} is not nullable but NULLs were found.")
+            logging.error(f"Nullability constraint violation: column {col_name} in {table_name} is not nullable but has nulls.")
+            raise ValueError(f"Column {col_name} of table {table_name} is not nullable but NULLs were found.")
 
-        logging.debug(f"Finished validating column {col_name}")
-
+    logging.debug("Validation terminated with success.")
     return df
 
 
 
-def normalize_filters(filters: dict):
+def normalize_filters(filters: dict)-> Tuple[dict, list]:
     """
     Split into a base AND dict (nested operators) and a list of OR-groups.
     - Base part: dict of fields (each field is nested op dict)
@@ -157,9 +184,9 @@ def validate_query_filters(
         data_collection: str,
         table_name: str,
         group: dict,
-        conn_path: str,
+        conn_path: Union[str, Path],
         schema_dict: dict
-):
+)-> dict:
     """
      - ensures columns exist in schema_dict[data_collection]
     - ensures columns are queryable for this table_name (metadata)
@@ -178,9 +205,10 @@ def validate_query_filters(
         a dictionary of typed filters
 
     """
-    # check taht filters exist as columns in the data_collection prod table
+    # check that filters exist as columns in the data_collection prod table
     invalid_cols = {c for c in group if c not in schema_dict[data_collection]}
     if invalid_cols:
+        logging.error(f"Column(s) {invalid_cols} do not exist in {data_collection}_prod.")
         raise KeyError(f"No such column(s) in {data_collection}_prod table: {[invalid_cols]}")
 
     # get columns metadata
@@ -196,12 +224,14 @@ def validate_query_filters(
         allowed = s.VALID_OPS.get(sql_t)
         # adding this to facilitate debug
         if not allowed:
+            logging.error(f"No operator policy for SQL type {sql_t} (column {col})")
             raise ValueError(f"No operator policy for SQL type '{sql_t}' (column '{col}').")
 
         caster = cast_map[col]
 
         for op, val in list(ops.items()):
             if op not in allowed:
+                logging.error(f"Operator {op} not allowed on column {col} of type {sql_types[col]}")
                 raise ValueError(f"Operator '{op}' not allowed for {sql_types[col]} column '{col}'.")
 
             try:

@@ -60,7 +60,7 @@ def read_and_wrangle_wb(
         # skip sheet if believed to be non-data
         # i.e. if 1 column only
         if len(df.columns) == 1:
-            logging.debug((f"Sheet {sheet} was excluded since it only has one column."))
+            logging.debug(f"Sheet {sheet} was excluded since it only has one column.")
             continue
 
 
@@ -347,7 +347,7 @@ def raw_to_prod(
 )-> None:
     """
     Moves the data from raw to prod table, selecting the most recent version of each record
-    that alre older than the cutoff provided.
+    that are older than the cutoff provided.
     Args:
         conn_path: Database path
         table_prefix: data collection name

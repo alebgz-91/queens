@@ -3,7 +3,10 @@ import logging
 import queens.core.read_write as rw
 import queens.core.utils as u
 
-def initialize(db_path: str, schema: dict) -> bool:
+def initialize(
+        db_path: Union[str, Path],
+        schema: dict
+) -> bool:
     """
     Idempotent DB bootstrap. Returns True if any table was created.
     """
@@ -40,11 +43,11 @@ def initialize(db_path: str, schema: dict) -> bool:
 
 
 def is_staged(
-        db_path: str,
+        db_path: Union[str, Path],
         data_collection: str
 ) -> bool:
     """
-    Returns True if prod exists and has rows (optionally for table_name).
+    Returns True if prod exists .
     """
     prod = f"{data_collection}_prod"
     return rw.table_exists(prod, db_path)
