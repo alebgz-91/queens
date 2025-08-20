@@ -1,23 +1,25 @@
 import os
-# Silence numexpr banner before anything imports pandas/numexpr
+# silence numexpr message before anything imports pandas
 os.environ.setdefault("NUMEXPR_NUM_THREADS", "8")
 
 import typer
 from typing import Optional, List
-import logging
 from tabulate import tabulate
 import pandas as pd
 import uvicorn
+import logging
 
 from queens import settings as s
 from queens.etl.bootstrap import initialize, is_staged
-from queens.etl.process import *
-import queens.core.read_write as rw
+from queens.etl.process import (ingest_tables, ingest_all_tables,
+                                get_data_info, get_metadata, stage_data,
+                                get_data_versions)
+from queens.core  import read_write as rw
 
 app = typer.Typer()
 
 @app.callback()
-def auto_startup(ctx: typer.Context):
+def auto_startup(ctx: typer.Context)-> None:
     """
     Initialise DB tables only for commands that write or expect tables to exist.
     Also configures logging once (file + console).
@@ -42,8 +44,6 @@ def config(
     export_path: Optional[str] = typer.Option(None, "--export-path"),
     show_current: bool = typer.Option(False, "--show-current")
 ):
-    import queens.settings as s
-
     if show_current:
         typer.echo(f"User dir:    {s.USER_DIR}")
         typer.echo(f"DB path:     {s.DB_PATH}")
@@ -59,6 +59,7 @@ def config(
         s.set_config(db_path=db_path, export_path=export_path)
         typer.echo("Configuration updated.")
     except Exception as e:
+        logging.debug(f"ERROR: cannot change config. {e}")
         typer.echo(f"Error updating config: {e}")
         raise typer.Exit(code=1)
 
@@ -67,7 +68,7 @@ def config(
 def ingest(
     collection: str,
     tables: Optional[List[str]] = typer.Option(None, "--table", "-t", help="Table(s) to update")
-):
+)-> None:
     """
     Update specific tables or all tables in a collection.
     """
@@ -90,7 +91,7 @@ def ingest(
 def stage(
     collection: str,
     as_of_date: Optional[str] = typer.Option(None, "--as_of_date", "--d", help="The cutoff point for data versioning.")
-):
+)-> None:
     """
     Stage the most recent data version for a collection.
     """
@@ -110,7 +111,7 @@ def info(
     table: Optional[str] = typer.Option(None, "--table", "-t", help="Optional table name to inspect"),
     vers: Optional[bool] = typer.Option(False, "--vers", "-v", help="Displays the ingested versions for the specified selection."),
     meta: Optional[bool] = typer.Option(False, "--meta", "-m", help="Displays queryable column names and data types for each table in the selection.")
-):
+)-> None:
     """
     Displays information on data according to the selected parameters, The defauls behaviour is to
     display table statistics for staged data. It can also display a list of ingested versions and schema information.
@@ -168,7 +169,7 @@ def export(
         table: Optional[str] = typer.Option(None, "--table", "-t", help="Optional table name to download"),
         path: Optional[str] = typer.Option(s.EXPORT_DIR, "--path", "-p", help="Optional destination path"),
         bulk: Optional[bool] = typer.Option(False, "--bulk", "-b", help="Whether to save all the data in a single file or not")
-):
+)-> None:
     # interrupt if data colleciton is not staged
     if not is_staged(db_path=s.DB_PATH, data_collection=collection):
         missing = f"{collection} staging table is missing"
@@ -206,7 +207,7 @@ def serve(
     port: int =  typer.Option(8000, "--port"),
     reload: bool = typer.Option(False, "--reload", help="Dev reload (spawns reloader process)"),
     log_level: str = typer.Option("info", "--log-level")
-):
+)-> None:
     """
     Starts the QUEENS API using Uvicorn. The app is not started unless at least one data collection has been staged.
     """
@@ -214,7 +215,6 @@ def serve(
     collections = list(s.SCHEMA.keys())  # or s.ETL_CONFIG.keys()
     missing = []
     for coll in collections:
-        prod = f"{coll}_prod"
         if not is_staged(s.DB_PATH, coll):
             missing.append(coll)
 
