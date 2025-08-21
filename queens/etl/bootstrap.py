@@ -1,7 +1,8 @@
 from pathlib import Path
+from typing import Union
 import logging
 import queens.core.read_write as rw
-import queens.core.utils as u
+from queens.core import utils as u
 
 def initialize(
         db_path: Union[str, Path],
