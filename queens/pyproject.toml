@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68", "wheel", "build"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "queens"          # or "queens" if free
+version = "0.1.0"
+description = "QUEENS (Queryable Energy National Statistics) — ETL + API for UK energy data."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Alessandro Bigazzi" }]
+dependencies = [
+  "pandas>=2.0",
+  "fastapi>=0.110",
+  "uvicorn>=0.22",
+  "typer>=0.9",
+  "requests>=2.31",
+  "openpyxl>=3.1",
+  "platformdirs>=4.0",
+  "beautifulsoup4>=4.12"
+]
+
+[project.scripts]
+queens = "queens.cli:app"          # <-- gives you the `queens` command
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["queens*"]
+
+[tool.setuptools.package-data]
+"queens" = [
+  "config/*.json",
+  "config/templates/**/*.xlsx"
+]

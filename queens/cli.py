@@ -7,7 +7,6 @@ from typing import Optional, List
 from tabulate import tabulate
 import pandas as pd
 import uvicorn
-import logging
 
 from queens import settings as s
 from queens.etl.bootstrap import initialize, is_staged
@@ -59,9 +58,8 @@ def config(
         s.set_config(db_path=db_path, export_path=export_path)
         typer.echo("Configuration updated.")
     except Exception as e:
-        logging.debug(f"ERROR: cannot change config. {e}")
-        typer.echo(f"Error updating config: {e}")
-        raise typer.Exit(code=1)
+        if e:
+            typer.echo(f"ERROR: execution terminated. \n {e}")
 
 
 @app.command()
@@ -85,6 +83,7 @@ def ingest(
 
     except Exception as e:
         typer.echo(f"ERROR - execution terminated: {e}")
+        raise typer.Exit()
 
 
 @app.command()
@@ -102,7 +101,8 @@ def stage(
         typer.echo(f"Data for {collection} staged successfully.")
 
     except Exception as e:
-        typer.echo(f"An error occurred when staging data: \n{e}")
+        typer.echo(f"ERROR: execution terminated: \n{e}")
+        raise typer.Exit()
 
 
 @app.command()
@@ -130,18 +130,22 @@ def info(
             df = get_data_versions(data_collection=collection, table_name=table)
 
 
-        elif meta:
-            df = get_metadata(data_collection=collection, table_name=table)
         else:
-            df = get_data_info(data_collection=collection, table_name=table)
+            if not is_staged(s.DB_PATH, collection):
+                typer.echo(f"No data have been staged yet. Run 'queens stage {collection}' first.")
+                raise typer.Exit(code=0)
+            if meta:
+                df = get_metadata(data_collection=collection, table_name=table)
+            else:
+                df = get_data_info(data_collection=collection, table_name=table)
 
         conditional_str = f", table {table}" if table else ""
         if df.empty:
             typer.echo(f"No results found for {collection}{conditional_str}.")
-            raise typer.Exit()
+            raise typer.Exit(code=0)
         else:
             typer.echo(f"Found {len(df)} result(s) for {collection}{conditional_str}:")
-            df.set_index(df.columns[0], inplace=True)
+            # df.set_index(df.columns[0], inplace=True)
 
             # for this table, break the result in chunks for readability
             if meta and (table is None):
@@ -158,8 +162,8 @@ def info(
                 typer.echo(tabulate(df, headers="keys"))
 
     except Exception as e:
-        typer.echo(f"An error has occurred: \n{e}")
-        raise typer.Exit(code=1)
+        typer.echo(f"Execution terminated. \n{e}")
+        raise typer.Exit()
 
 
 @app.command()
@@ -197,7 +201,7 @@ def export(
                 bulk_export=bulk
             )
     except Exception as e:
-        typer.echo(f"An error has occurred when exporting data: \n{e}")
+        typer.echo(f"ERROR: execution terminated. \n{e}")
         raise typer.Exit(code=1)
 
 

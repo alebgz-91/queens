@@ -259,6 +259,7 @@ def get_metadata(
 
         # append data type column
         p.reset_index(drop=False, inplace=True)
+
         p["Data type"] = p["Column name"].apply(
             lambda x: s.SCHEMA[data_collection][x]["type"]
         )
