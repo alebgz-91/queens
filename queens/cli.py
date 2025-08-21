@@ -7,6 +7,7 @@ from typing import Optional, List
 from tabulate import tabulate
 import pandas as pd
 import uvicorn
+from pathlib import Path
 
 from queens import settings as s
 from queens.etl.bootstrap import initialize, is_staged
@@ -181,6 +182,10 @@ def export(
 
         typer.echo(f"Cannot export: {missing}. {hint}.")
         raise typer.Exit(code=1)
+
+    # create path if not exists.
+    path = Path(os.path.abspath(path))
+    path.mkdir(parents=True, exist_ok=True)
 
     try:
         if table:
