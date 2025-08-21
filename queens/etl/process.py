@@ -15,12 +15,12 @@ def ingest_tables(
         ingest_ts: str = None
 ):
     """
-    Update a selection of tables, fetching new data from source URLs.
+    Reads, processes and writes a selection of tables, fetching new data from source URLs.
 
     Args:
-        data_collection: name of the release the tables belong to. Myst be lowercase
-        table_list: a list or iterable of tables to be parsed and updated
-        ingest_ts: timestamp string for ingest. If not passed by batch process it will set to today
+        data_collection: name of the parent data collection for the tables (e.g. 'dukes')
+        table_list: a list or iterable of tables to be parsed and ingested (e.g. ['1.1', 'J.1']
+        ingest_ts: Optional ISO timestamp string. Automatically set to now if None is passed.
 
     Returns:
         None
@@ -34,6 +34,7 @@ def ingest_tables(
         # and we can process data safely
         for table in table_list:
 
+            logging.info(f"Processing {data_collection} table {table}.")
             u.check_inputs(data_collection=data_collection,
                            table_name=table,
                            etl_config=s.ETL_CONFIG)
@@ -42,7 +43,7 @@ def ingest_tables(
                                            data_collection=data_collection)
 
             # generate config dictionary
-            logging.info(f"Getting config for table: {table}")
+            logging.debug(f"Getting config for table: {table}")
             config = vld.generate_config(
                 data_collection=data_collection,
                 table_name=table,
@@ -58,12 +59,12 @@ def ingest_tables(
             f_call = getattr(tr, f_name)
 
             # execute
-            logging.info(f"Calling function {f_name}")
+            logging.debug(f"Calling function {f_name}")
             res = u.call_func(func=f_call, args_dict=f_args)
 
             # placeholder for the time being: return results
             for table_sheet in res:
-                logging.info(f"Validating schema for {table_sheet}")
+                logging.info(f"Ingesting subtable {table_sheet}.")
                 df = vld.validate_schema(
                     data_collection=data_collection,
                     table_name=table_sheet,
@@ -71,7 +72,7 @@ def ingest_tables(
                     schema_dict=s.SCHEMA)
 
                 # write into raw table
-                logging.info(f"Ingesting table {table_sheet}")
+                logging.debug(f"Ingesting table {table_sheet}")
                 to_table = data_collection + "_raw"
                 ingest_id = rw.ingest_frame(
                     df=df,
@@ -83,17 +84,27 @@ def ingest_tables(
                     conn_path=s.DB_PATH,
                     ingest_ts=ingest_ts
                 )
-                logging.info(f"Table {table_sheet} ingest successful with id {ingest_id}")
+                logging.debug(f"Sheet {table_sheet} ingested successfully with id {ingest_id}")
+            logging.info(f"ETL successful for table {table}")
 
     except Exception as e:
-        logging.error(f"ETL tailed for {data_collection}: \n{e}")
+        logging.error(f"ETL failed: {e}")
         raise e
 
-    logging.info(f"Finished ETL update for all tables.")
+    logging.info("ETL run completed successfully.")
     return None
 
 
 def ingest_all_tables(data_collection: str):
+    """
+    Read, process and write all the available tables in a given data_collection.
+    Args:
+        data_collection: Name of the data collection to ingest (e.g. 'dukes')
+
+    Returns:
+        None
+
+    """
 
     try:
         # verify that the data collection exists
@@ -103,12 +114,12 @@ def ingest_all_tables(data_collection: str):
         ingest_ts = datetime.datetime.now().isoformat()
 
         # to get the list of tables look at static config files
-        logging.info(f"Updating all tables for {data_collection}")
+        logging.info(f"Processing all tables for {data_collection}.")
         config = s.ETL_CONFIG[data_collection]
 
         # go through each chapter and table
         for chapter_key in config.keys():
-            logging.info(f"Updating {chapter_key.replace('_', ' ')}")
+            logging.info(f"Processing {chapter_key.replace('_', ' ')}.")
 
             # execute
             table_list = config[chapter_key].keys()
@@ -118,10 +129,10 @@ def ingest_all_tables(data_collection: str):
                           ingest_ts=ingest_ts)
 
     except Exception as e:
-        logging.error(f"Batch update failed for {data_collection}.")
+        logging.error(f"ERROR: {e}")
         raise e
 
-    logging.info(f"All chapters processed for {data_collection}")
+    logging.info(f"Process ended with success: all tables ingested for {data_collection}.")
     return None
 
 
@@ -134,27 +145,28 @@ def stage_data(
     Optionally, the user can select older versions of the data.
     Args:
         data_collection: the data collection to stage into production
-        as_of_date: optional cutoff for data versioning. Default is today's date.
+        as_of_date: optional cutoff for data versioning. Default is today's date. Required format is '%Y-%m-%d'
 
     Returns:
+        None
 
     """
 
     if as_of_date is not None:
-        as_of_date = datetime.datetime.strptime(as_of_date, "%Y-%m-%d")
+        cutoff_date = datetime.datetime.strptime(as_of_date, "%Y-%m-%d")
     else:
-        as_of_date = datetime.datetime.now().isoformat()
+        cutoff_date = datetime.datetime.now().isoformat()
 
     try:
         # check if the data collection exists
         u.check_inputs(data_collection=data_collection,
                        etl_config=s.ETL_CONFIG)
 
-        logging.info(f"Staging {data_collection} data.")
+        logging.debug(f"Staging {data_collection} data.")
         rw.raw_to_prod(
             conn_path=s.DB_PATH,
             table_prefix=data_collection,
-            cutoff=as_of_date
+            cutoff=cutoff_date
         )
 
         # get the list of tables staged to prod. Note that the global table number
@@ -168,7 +180,7 @@ def stage_data(
         table_list = rw.read_sql_as_frame(conn_path=s.DB_PATH,
                                           query=query)["table_name"]
 
-        logging.info("Updating metadata.")
+        logging.debug("Updating metadata.")
         for table_name in table_list:
             rw.insert_metadata(
                 data_collection=data_collection,
@@ -177,7 +189,7 @@ def stage_data(
                 schema_dict=s.SCHEMA
             )
     except Exception as e:
-        logging.error(f"Staging failed for {data_collection}: \n {e}")
+        logging.error(f"ERROR: staging failed for {data_collection}: \n {e}")
         raise e
 
     date_str = "today" if as_of_date is None else as_of_date
@@ -188,7 +200,7 @@ def stage_data(
 def get_metadata(
         data_collection: str,
         table_name: str = None,
-):
+) -> pd.DataFrame:
     """
     Fetch queryable columns for a given table_name or for all tables in the whole of data_collection
 
@@ -228,7 +240,7 @@ def get_metadata(
 
     # early return for empty dataframe
     if df.empty:
-        return pd.DataFrame
+        return pd.DataFrame()
 
     # two different outputs: simple list for table-specific results
     # and full structured table for whole data collection
@@ -330,8 +342,8 @@ def get_data_versions(
     Show all successful ingestion timestamps for a given data collection.
 
     Args:
-        data_collection (str): The name of the data collection (e.g., "dukes").
-        table_name (str): Optional name of table to inspect. Default shows data_collection level versions only
+        data_collection: The name of the data collection (e.g., "dukes").
+        table_name: Optional name of table to inspect. Default shows data_collection level versions only
 
     Returns:
         pd.DataFrame: A dataframe listing all ingested versions with timestamps.
