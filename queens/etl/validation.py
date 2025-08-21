@@ -2,10 +2,10 @@ import pandas as pd
 import logging
 from typing import Union, Tuple
 from pathlib import Path
-from queens import settings as s
-from queens.core import web_scraping as ws
-from queens.core import utils as u
-from queens.core import read_write as rw
+from .. import settings as s
+from ..core import web_scraping as ws
+from ..core import utils as u
+from ..core import read_write as rw
 
 
 def generate_config(

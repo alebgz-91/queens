@@ -7,12 +7,13 @@ import fastapi as f
 from typing import Optional
 from contextlib import asynccontextmanager
 import logging
-import queens.core.utils as u
+
+from ..core import utils as u
 import json
 
-from queens.etl import validation as vld
-from queens.core.read_write import read_sql_as_frame
-from queens import settings as s
+from ..etl import validation as vld
+from ..core.read_write import read_sql_as_frame
+from .. import settings as s
 
 DEFAULT_LIMIT = 1000
 MAX_LIMIT = 5000

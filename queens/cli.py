@@ -9,12 +9,12 @@ import pandas as pd
 import uvicorn
 from pathlib import Path
 
-from queens import settings as s
-from queens.etl.bootstrap import initialize, is_staged
-from queens.etl.process import (ingest_tables, ingest_all_tables,
+from . import settings as s
+from .etl.bootstrap import initialize, is_staged
+from .etl.process import (ingest_tables, ingest_all_tables,
                                 get_data_info, get_metadata, stage_data,
                                 get_data_versions)
-from queens.core  import read_write as rw
+from .core  import read_write as rw
 
 app = typer.Typer()
 
