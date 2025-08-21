@@ -3,6 +3,7 @@ from typing import Union
 import logging
 import queens.core.read_write as rw
 from queens.core import utils as u
+from queens import settings as s
 
 def initialize(
         db_path: Union[str, Path],

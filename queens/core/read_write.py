@@ -190,10 +190,10 @@ def export_all(
 
     try:
         if not bulk_export:
+            logging.info(f"Exporting tables from {data_collection} to {file_type}.")
             chapter_list = s.ETL_CONFIG[data_collection].keys()
 
             for chapter in chapter_list:
-                logging.info(f"Saving tables from {data_collection}, {chapter}")
                 table_list = s.ETL_CONFIG[data_collection][chapter].keys()
 
                 for table_key in table_list:
@@ -236,7 +236,7 @@ def export_all(
             else:
                 raise TypeError(f"Exporting unsupported to file type {file_type}.")
 
-            logging.info(f"Successfully saved {output_path + file_name}")
+        logging.info(f"Data exported successfully.")
 
     except Exception as e:
         logging.error(f"Export failed for {table_name}: \n{e}")
