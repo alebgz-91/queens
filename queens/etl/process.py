@@ -1,8 +1,8 @@
-from queens.etl import validation as vld
-from queens.core import read_write as rw
-from queens.core import utils as u
-from queens.etl import transformations as tr
-from queens import settings as s
+from ..etl import validation as vld
+from ..core import read_write as rw
+from ..core import utils as u
+from ..etl import transformations as tr
+from .. import settings as s
 import logging
 import datetime
 import pandas as pd

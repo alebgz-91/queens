@@ -1,20 +1,20 @@
-import os.path
+import os
 from typing import Optional, List, Dict, Any
 import pandas as pd
 from pathlib import Path
 
-from queens import settings as s
-from queens.etl.bootstrap import initialize, is_staged
-from queens.etl.process import (
+from . import settings as s
+from .etl.bootstrap import initialize, is_staged
+from .etl.process import (
     ingest_tables as _ingest_tables,
     ingest_all_tables as _ingest_all_tables,
     stage_data as _stage_data,
     get_data_info as _get_data_info,
     get_data_versions as _get_data_versions,
 )
-from queens.etl import validation as vld
-from queens.core import read_write as rw
-from queens.core import utils as u
+from .etl import validation as vld
+from .core import read_write as rw
+from .core import utils as u
 
 # ---------- public API (import these in notebooks/code) ----------
 

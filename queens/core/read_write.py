@@ -5,8 +5,8 @@ import datetime
 import os
 from typing import Union
 from pathlib import Path
-from queens import settings as s
-from queens.core import utils as u
+from .. import settings as s
+from ..core import utils as u
 
 
 def read_and_wrangle_wb(
