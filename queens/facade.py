@@ -1,5 +1,5 @@
 import os
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 import pandas as pd
 from pathlib import Path
 
@@ -156,7 +156,7 @@ def export(
     data_collection: str,
     table_name: Optional[str] = None,
     file_type: str = "csv",
-    output_path: Optional[str, Path] = None,
+    output_path: Union[str, Path] = None,
     bulk_export: bool = False,
 ) -> None:
     """
