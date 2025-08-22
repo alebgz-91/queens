@@ -92,9 +92,6 @@ def read_and_wrangle_wb(
         return wb_as_dict
 
 
-#TODO: abstract the function below so that it works with other data collections
-# This also requires changing the signature to include a data_collection argument
-
 
 def export_table(
         data_collection: str,
