@@ -517,12 +517,15 @@ def _process_dukes_5_6_summaries(
                              fixed_header=fixed_header + 1)
 
     logging.debug("Fill in year using interim titles")
-    df["year"] = (df["Generator type"]
-                  .apply(
-        lambda s: s.split("5.6.J")[1].split("summary")[0].strip() if "Table" in s else np.nan)
-                  .fillna(method="ffill")
-
-                  .fillna(first_year)
+    # extract the year in the table titles and store in a separate column
+    # then forward fill the blanks. This will fill in all years except the first
+    # The topmost yeat was retrieved before so can be filled in at the end.
+    df.loc[:, "year"] = (
+        df["Generator type"]
+        .apply(
+            lambda s: s.split("5.6.J")[1].split("summary")[0].strip() if "Table" in s else np.nan)
+        .ffill()
+        .fillna(first_year)
 
                   )
 
@@ -573,10 +576,9 @@ def _process_dukes_5_6_summaries(
 
     df["fuel"] = df["fuel"].apply(remove_note_tags)
 
-    df.set_index(list(template.columns) + ["fuel"],
+    df.set_index(list(template.columns) + ["fuel", "year"],
                  inplace=True)
 
-    print(df.index.names, df.columns)
     return df
 
 

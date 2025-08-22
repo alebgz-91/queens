@@ -477,22 +477,14 @@
                 "f": "process_sheet_to_frame",
                 "f_args": {
                     "sheet_names": ["5.1.1"],
-                    "ignore_mapping": true,
-                    "var_to_melt": "fuel",
-                    "id_var_position": 0,
-                    "id_var_name": "year",
-                    "unit": "Mtoe"
+                    "var_to_melt": "fuel"
                 }
             },
             "5.1.2": {
                 "f": "process_sheet_to_frame",
                 "f_args": {
                     "sheet_names": ["5.1.2"],
-                    "ignore_mapping": true,
-                    "var_to_melt": "item",
-                    "id_var_position": 0,
-                    "id_var_name": "year",
-                    "unit": "TWh"
+                    "var_to_melt": "item"
                 }
             },
             "5.1.3": {
