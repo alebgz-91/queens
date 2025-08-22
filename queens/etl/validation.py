@@ -134,7 +134,8 @@ def validate_schema(
                                              errors="coerce",
                                              downcast="integer")
         elif s.DTYPES[exp_dtype] is str:
-            df[col_name] = df[col_name].astype(str)
+            # preserve nulls so that they can be raised in the next check
+            df[col_name] = df[col_name].astype("string")
 
         # can implement further data types in the future
 
