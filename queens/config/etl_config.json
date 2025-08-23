@@ -347,8 +347,11 @@
         },
         "chapter_5": {
             "5.1": {
-                "f": "process_dukes_5_1",
-                "f_args": {}
+                "f": "process_sheet_to_frame",
+                "f_args": {
+		    "sheet_names": ["5.1", "5.1.A"],
+		    "drop_cols": ["Generator type", "Technology"]
+		}
             },
             "5.2": {
                 "f": "process_sheet_to_frame",

@@ -250,7 +250,7 @@ def setup_logging(
     file_name: str = "queens.log",
     max_bytes: int = 5_000_000,
     backups: int = 3,
-    fmt: str = "%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+    fmt: str = "%(asctime)s - %(levelname)s - %(message)s",
 ) -> None:
     """
     Configure root logging once. Safe to call multiple times (idempotent).
