@@ -1,5 +1,9 @@
 # QUEENS  
 
+[![PyPI version](https://img.shields.io/pypi/v/queens.svg)](https://pypi.org/project/queens/)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/queens.svg)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 QUEENS (QUEryable Energy National Statistics) is a Python package that:  
 
 - ingests UK energy National Statistics Excel tables into SQLite,  
