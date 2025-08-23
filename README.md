@@ -110,5 +110,8 @@ print(df.head())
 0.1.0 - August 2025
 ```
 
-## Aythor
-Developed by Alessandro Bigazzi.
+## Aythor and contacts
+Alessandro Bigazzi (maintainer).
+
+If you find a bug, please open an issue. 
+For other enquiries, please [e.mail me](alessandro.bigazzi@aol.com).
