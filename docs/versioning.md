@@ -16,7 +16,7 @@ For each requested table:
    (`ingest_ts`, `data_collection`, `table_name`, `url`, `table_description`, `success` flag set to 1 if the write succeeds).
 
 ## Staging (PROD snapshot)
-`raw_to_prod(...)` materializes `{collection}_prod` as **the latest successful version** for each table (<= cutoff date).
+`raw_to_prod(...)` materialises `{collection}_prod` as **the latest successful version** for each table (<= cutoff date).
 This is a **full-table snapshot** per `table_name` — the API reads only from PROD, never from RAW.
 
 After staging, `insert_metadata(...)` refreshes `_metadata` for each staged `table_name`:
@@ -33,7 +33,7 @@ Table-specific post-processing hooks (applied by `_postprocess(...)` when `table
 - `J.1`: `_postprocess_J_1`
 - `F.2`: `_postprocess_dukes_F_2`
 - `5.2`: `_postprocess_dukes_5_2`
-- `4.4` / `4.5`: `_postprocess_normalize_names` (normalize sheet suffixes like `4.4a` → `4.4.A`).
+- `4.4` / `4.5`: `_postprocess_normalize_names` (normalise sheet suffixes like `4.4a` → `4.4.A`).
 
 Custom handlers:
 - `process_dukes_5_6(...)`: orchestrates the three 5.6 sheets (including `_process_dukes_5_6_summaries(...)` for the Annual summaries layout).

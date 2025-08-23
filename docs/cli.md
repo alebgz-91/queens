@@ -1,11 +1,11 @@
 # CLI
 
-CLI entrypoint: `queens/cli.py` (Typer). On any run, logging is configured and, for certain commands, tables are auto-initialized.
+CLI entrypoint: `queens/cli.py` (Typer). On any run, logging is configured and, for certain commands, tables are auto-initialised.
 
-## Auto-startup behavior
+## Auto-startup behaviour
 For commands in `{ingest, stage, info, export, serve}`:
 - Logging is configured once (file + console).
-- Database is initialized idempotently (`_ingest_log`, `_metadata`, and `{collection}_raw` tables per `schema.json`).
+- Database is initialised idempotently (`_ingest_log`, `_metadata`, and `{collection}_raw` tables per `schema.json`).
 
 ## Commands
 
