@@ -8,7 +8,7 @@ The API and the `queens.query()` function share the same validation layer from `
 - **OR groups** via `$or`: 
   - `{"$or": [{"fuel": "Gas"}, {"fuel": "Coal"}], "year": {"gt": 2020}}`
 
-`normalize_filters()` normalizes these into:
+`normalize_filters()` normalises these into:
 - a **base** dict (AND of fields),
 - an optional list of **OR** groups (each element is itself an AND group).
 

@@ -12,7 +12,7 @@ q.setup_logging(level="info")  # logs to console + rotating file in user dir
 
 ## `ingest(data_collection: str, tables: Union[List[str], str] = None) -> None`
 - Ingest one or more tables into RAW (and log to `_ingest_log`). If `tables` is `None`, ingests **all** tables for the collection.
-- Initializes DB tables on demand.
+- Initialises DB tables on demand.
 
 ## `stage(data_collection: str, as_of_date: Optional[str] = None) -> None`
 - Rebuild `{collection}_prod` snapshot as of the given cutoff (or latest), and refresh `_metadata`.

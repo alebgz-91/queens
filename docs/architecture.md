@@ -4,7 +4,7 @@ This is a general overview of the package features and codebase.
 
 ## High level
 - **RAW**: `{collection}_raw` (per collection). Rows are appended with an `ingest_id` that ties back to `_ingest_log`.
-- **PROD**: `{collection}_prod` — a **snapshot** materialized from RAW using the most recent successful `ingest_ts` per `table_name` (up to a cutoff). The API **only** reads from PROD.
+- **PROD**: `{collection}_prod` — a **snapshot** materialised from RAW using the most recent successful `ingest_ts` per `table_name` (up to a cutoff). The API **only** reads from PROD.
 - **_ingest_log**: provenance of each ingest (ts, collection, table_name, url, description, success flag).
 - **_metadata**: for each `(data_collection, table_name)`, stores queryable column names and their SQL dtype and simple stats (n_non_nulls, n_unique).
 

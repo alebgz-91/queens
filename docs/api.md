@@ -14,9 +14,9 @@ Query parameters:
 - `limit` (int, default 1000, max 5000)
 - `cursor` (optional int): pagination cursor — returns rows with `rowid > cursor`
 
-Behavior:
+Behaviour:
 1) Validate `collection`/`table_name` against `ETL_CONFIG`.
-2) Parse `filters` JSON; normalize and validate against schema and `_metadata`.
+2) Parse `filters` JSON; normalise and validate against schema and `_metadata`.
 3) Build WHERE clause, **force** `table_name = ...`, and apply optional `rowid > cursor`.
 4) Read from `{collection}_prod` ordered by `rowid`, limited to `limit`.
 5) Return:
