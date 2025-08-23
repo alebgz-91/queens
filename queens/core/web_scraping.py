@@ -2,6 +2,8 @@ import re
 import requests
 from bs4 import BeautifulSoup
 
+# wait up to 30 seconds before failing on connection/reading HTML from GOV.UK
+DEFAULT_TIMEOUT = 30
 
 def _get_dukes_urls(url: str)-> dict:
     """
@@ -14,13 +16,23 @@ def _get_dukes_urls(url: str)-> dict:
         dict: Dictionary in the form:
               {
                   "1.1": {
-                      "name": "DUKES 1.1 Table name",
+                      "description": "DUKES 1.1 Table name",
                       "url": "https://..."
                   },
                   ...
               }
     """
-    response = requests.get(url)
+    try:
+        # add timeout and surface HTTP errors
+        response = requests.get(url, timeout=DEFAULT_TIMEOUT)
+        response.raise_for_status()
+    except requests.exceptions.Timeout as e:
+        # keep the exception type meaningful for callers/logs
+        raise TimeoutError(f"Timed out fetching {url} after {DEFAULT_TIMEOUT}s") from e
+    except requests.exceptions.RequestException as e:
+        # catch connection, HTTP, etc.
+        raise RuntimeError(f"Failed to fetch DUKES chapter page: {e}") from e
+
     soup = BeautifulSoup(response.content, "html.parser")
     dukes_tables = {}
 
