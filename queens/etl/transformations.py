@@ -451,36 +451,9 @@ def process_multi_sheets_to_frame(
 
     return out
 
-
-def process_dukes_5_1(
-        url: str,
-        template_file_path: str
-):
-    """
-    Calls transformer on separate sheets with different parameters
-
-    """
-    logging.debug("Processing 5.1 main sheet.")
-    t_5_1 = process_sheet_to_frame(
-        url=url,
-        data_collection="dukes",
-        template_file_path=template_file_path,
-        sheet_names=["5.1"]
-    )
-
-    logging.debug("Processing 5.1.A")
-    t_5_1_A = process_sheet_to_frame(
-        url=url,
-        data_collection="dukes",
-        template_file_path=template_file_path,
-        sheet_names=["5.1.A"],
-        drop_cols=["Generator type", "Technology"]
-    )
-
-    return {**t_5_1, **t_5_1_A}
-
-
-
+# ---------------------------
+# custom processing functions
+# ---------------------------
 
 def _process_dukes_5_6_summaries(
     url: str,

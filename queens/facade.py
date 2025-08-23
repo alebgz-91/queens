@@ -16,20 +16,28 @@ from .etl import validation as vld
 from .core import read_write as rw
 from .core import utils as u
 
-# ---------- public API (import these in notebooks/code) ----------
+# public API (import these in notebooks/code) ----------
 
 def ingest(
         data_collection: str,
-        tables: Optional[List[str]] = None
+        tables: Union[List[str], str] = None
 ) -> None:
     """
     Ingest one or more tables for a data collection into RAW tables.
     If tables is None, ingests all tables for the collection.
+
+    Args:
+        data_collection: the name of the parent data collection (e.g. "dukes")
+        tables: a list of table names to ingest, or the name of the table if only one is required (e.g. ["1.1", "2.1"] or "J.1"
     """
     # initialise DB
-    initialize(s.DB_PATH, s.SCHEMA)
+    b = initialize(s.DB_PATH, s.SCHEMA)
 
     if tables:
+        # tolerate string for a single table name
+        if isinstance(tables, str):
+            tables = [tables]
+
         _ingest_tables(data_collection=data_collection,
                        table_list=tables)
     else:
@@ -42,6 +50,10 @@ def stage(
 ) -> None:
     """
     Move most recent (or cutoff) data from RAW to PROD and refresh metadata.
+
+    Args:
+        data_collection: the name of the data collection to stage
+        as_of_date: cutoff date to which a snapshot should be stage. Format is "%Y-%mm-%dd"
     """
     # initialise DB
     initialize(s.DB_PATH, s.SCHEMA)
