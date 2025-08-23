@@ -1,18 +1,39 @@
 # QUEENS: QUEryable Energy National Statistics
 
-**QUEENS** is a Python package that:
-- **ingests** UK energy National Statistics Excel tables into SQLite,
-- **stages** a consistent snapshot (one version per table at a time),
-- **serves** the staged data via **FastAPI**,
-- exposes a **CLI** and **Python facade** for querying and export.
+# QUEENS  
 
-Think of it as the **royal version of DUKES** 👑 — a reliable, machine-readable layer over DESNZ publications (DUKES, Energy Trends).
+QUEENS (QUEryable Energy National Statistics) is a Python package that:  
+
+- ingests UK energy National Statistics Excel tables into SQLite,  
+- stages a consistent snapshot (one version per table at a time),  
+- serves the staged data via FastAPI,  
+- exposes a CLI and Python facade for querying and export.  
+
+Think of it as the royal counterpart to DUKES 👑 — a principled, machine-readable layer over DESNZ publications (DUKES, Energy Trends).  
 
 ---
 
-## Why this exists
+## Why this exists  
 
-I used to work in the DESNZ team that publishes DUKES and related collections. We constantly received requests from policy colleagues and modellers for data and insights that required a lot of manual manipulation of the published tables. I always wished there was a queryable counterpart to the public-facing Excel files. **QUEENS** is a product of that mindset: reproduciblet ingestion + strict schema validation + data versioning + a simple API so analysts can get on with their work without risking being inconsistent with the published stats.
+I used to work in the DESNZ team that publishes DUKES and related collections. We constantly received requests from policy colleagues and modellers for data and insights that required hours of manual manipulation of the published tables.  
+
+I always wished there was a queryable counterpart to the public-facing Excel files — something that preserved the authority of the published stats, but removed the drudgery.  
+
+QUEENS is the result of that mindset: reproducible ingestion, strict schema validation, data versioning, and a simple API so analysts can focus on insight rather than wrangling — all while ensuring consistency with the official published numbers.  
+
+Another driver was that whenever we provided figures externally, we were obliged to use the published versions (since they were the “true” source), even though internal files were easier to handle but often out of sync. With QUEENS, the published spreadsheets become directly usable, versioned, and queryable.  
+
+---
+
+## Customisable and extendable  
+
+Although QUEENS ships ready-made for DUKES and related DESNZ tables, it isn’t limited to them.  
+Users can extend it to other collections by providing their own table templates and schema definitions.  
+
+Because ingestion is versioned, you can safely ingest multiple vintages of the same tables and then stage whichever version you wish.  
+This makes it straightforward to track revisions, compare snapshots across releases, or reproduce results tied to a specific publication date.  
+
+In this way, QUEENS can serve as a general-purpose bridge between messy official spreadsheets and clean, queryable datasets — one that not only structures the data, but also preserves its history.  
 
 ---
 
