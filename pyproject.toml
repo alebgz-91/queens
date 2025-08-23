@@ -15,11 +15,9 @@ classifiers = [
   "Programming Language :: Python :: 3 :: Only",
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
-  "Intended Audience :: Data/Analysis/Energy/Research",
   "Topic :: Database",
-  "Topic:: API",
-  "Topic:: ETL",
-  "Topic :: Scientific/Engineering :: Information Analysis"
+  "Topic :: Scientific/Engineering :: Information Analysis",
+  "Natural Language :: English"
 ]
 dependencies = [
   "pandas>=2.0",
