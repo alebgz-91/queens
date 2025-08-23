@@ -1,6 +1,6 @@
 # Architecture
 
-This description reflects only the code you provided.
+This is a general overview of the package features and codebase.
 
 ## High level
 - **RAW**: `{collection}_raw` (per collection). Rows are appended with an `ingest_id` that ties back to `_ingest_log`.
