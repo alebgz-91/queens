@@ -1,5 +1,3 @@
-# QUEENS: QUEryable Energy National Statistics
-
 # QUEENS  
 
 QUEENS (QUEryable Energy National Statistics) is a Python package that:  
