@@ -100,3 +100,15 @@ print(df.head())
 - Data sources are public National Statistics from DESNZ pages. QUEENS automates access and reshaping; it does **not** alter official figures beyond deterministic formatting (long/flat) and indexing (mapping out to nested indexes).
 - For Parquet, install **pyarrow** or **fastparquet**.
 - The CLI `serve` command uses sensible defaults; if you expose host/port, ensure flags match your installed version.
+
+## Future development.
+- Extension to other data collections (Energy Trends, Energy Emissions statistics...).
+- Handling schema evolution of templates - e.g. if a table changes format at some point, being able to ingest both versions.
+
+## Version history
+```
+0.1.0 - August 2025
+```
+
+## Aythor
+Developed by Alessandro Bigazzi.
