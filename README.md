@@ -15,7 +15,7 @@ Think of it as the royal counterpart to DUKES 👑 — a principled, machine-rea
 
 ## Why this exists  
 
-I used to work in the DESNZ team that publishes DUKES and related collections. We constantly received requests from policy colleagues and modellers for data and insights that required hours of manual manipulation of the published tables.  
+I used to work in the Energy Statistics team, producing collaborating at the publication of DUKES and related collections. We constantly received requests from policy colleagues and modellers for data and insights that required considerable manual manipulation of the published tables.  
 
 I always wished there was a queryable counterpart to the public-facing Excel files — something that preserved the authority of the published stats, but removed the drudgery.  
 
@@ -33,7 +33,7 @@ Users can extend it to other collections by providing their own table templates 
 Because ingestion is versioned, you can safely ingest multiple vintages of the same tables and then stage whichever version you wish.  
 This makes it straightforward to track revisions, compare snapshots across releases, or reproduce results tied to a specific publication date.  
 
-In this way, QUEENS can serve as a general-purpose bridge between messy official spreadsheets and clean, queryable datasets — one that not only structures the data, but also preserves its history.  
+In this way, QUEENS can serve as a general-purpose bridge between human-readable official spreadsheets and clean, queryable datasets — one that not only structures the data, but also preserves its history.  
 
 ---
 
