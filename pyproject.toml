@@ -40,6 +40,7 @@ Repository = "https://github.com/alebgz-91/queens"
 Issues = "https://github.com/queens/issues"
 Documentation = "https://github.com/queens/tree/main/docs"
 
+
 [project.scripts]
 queens = "queens.cli:app"          # exposes the `queens` CLI
 
