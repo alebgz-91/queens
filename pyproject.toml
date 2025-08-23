@@ -1,17 +1,29 @@
 [build-system]
-requires = ["setuptools>=68", "wheel", "build"]
+requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "queens"          # or "queens" if free
+name = "queens"                    # change if taken on PyPI (e.g. "queens-energy")
 version = "0.1.0"
-description = "QUEENS (Queryable Energy National Statistics) — ETL + API for UK energy data."
+description = "QUEENS (Queryable Energy National Statistics) — ETL + API + CLI for UK energy data."
 readme = "README.md"
 requires-python = ">=3.9"
-license = { text = "MIT" }
+license = { file = "LICENSE" }     # or: license = { text = "MIT" }
 authors = [{ name = "Alessandro Bigazzi" }]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Intended Audience :: Data/Analysis/Energy/Research",
+  "Topic :: Database",
+  "Topic:: API",
+  "Topic:: ETL",
+  "Topic :: Scientific/Engineering :: Information Analysis"
+]
 dependencies = [
   "pandas>=2.0",
+  "numpy>=1.23",
   "fastapi>=0.110",
   "uvicorn>=0.22",
   "typer>=0.9",
@@ -19,11 +31,19 @@ dependencies = [
   "openpyxl>=3.1",
   "platformdirs>=4.0",
   "beautifulsoup4>=4.12",
+  "tabulate>=0.9",
   "pyarrow>=10"
 ]
+          # install via: pip install queens[parquet]
+
+[project.urls]
+Homepage = "https://github.com/queens"
+Repository = "https://github.com/alebgz-91/queens"
+Issues = "https://github.com/queens/issues"
+Documentation = "https://github.com/queens/tree/main/docs"
 
 [project.scripts]
-queens = "queens.cli:app"          # <-- gives you the `queens` command
+queens = "queens.cli:app"          # exposes the `queens` CLI
 
 [tool.setuptools]
 include-package-data = true
@@ -33,7 +53,7 @@ where = ["."]
 include = ["queens*"]
 
 [tool.setuptools.package-data]
-"queens" = [
+queens = [
   "config/*.json",
-  "config/templates/**/*.xlsx"
+  "config/templates/**/*"
 ]
