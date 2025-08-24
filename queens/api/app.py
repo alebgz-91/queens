@@ -195,7 +195,7 @@ def get_metadata(
     try:
         # verify existence of data collection
         u.check_inputs(
-            data_collection=collection
+            data_collection=collection,
             etl_config=s.ETL_CONFIG)
 
     except NameError as e:
