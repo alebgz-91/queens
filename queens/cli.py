@@ -26,7 +26,7 @@ def auto_startup(ctx: typer.Context)-> None:
     """
     # configure logging once for any CLI invocation
     s.setup_logging(file_name="queens_cli.log",
-                    level="debug")
+                    level="info")
 
     # only certain commands require auto-startup
     commands_requiring_init = {"ingest", "stage", "info", "export", "serve"}
