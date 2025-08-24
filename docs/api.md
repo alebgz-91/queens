@@ -39,4 +39,8 @@ Errors:
 Query parameters:
 - `table_name` (required)
 
-Returns the `_metadata` rows for the `(data_collection, table_name)` pair as a JSON list. Same 404/500 error handling as above.
+Returns the `_metadata` rows for the `(data_collection, table_name)` pair as a JSON list. Same 404/500 error handling as above. The response format is as follows:
+```
+{"data": List[dict]
+```
+
