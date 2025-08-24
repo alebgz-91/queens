@@ -219,4 +219,4 @@ def get_metadata(
         logging.error("Unexpected error: " + str(e))
         raise f.HTTPException(status_code=500, detail=f"Unexpected error: {e}")
 
-    return df.to_dict(orient="records")
+    return {"data": df.to_dict(orient="records")}
