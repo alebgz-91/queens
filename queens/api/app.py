@@ -193,10 +193,9 @@ def get_metadata(
 )-> dict:
 
     try:
-        # verify existence of input
+        # verify existence of data collection
         u.check_inputs(
-            data_collection=collection,
-            table_name=table_name,
+            data_collection=collection
             etl_config=s.ETL_CONFIG)
 
     except NameError as e:
