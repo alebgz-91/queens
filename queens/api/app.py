@@ -64,16 +64,30 @@ def get_data(
 
     """
 
+    # check that the data collection exists
     try:
-        logging.debug("Checking existence of data collection and table name.")
-        u.check_inputs(
-            data_collection=collection,
-            table_name=table_name,
-            etl_config=s.ETL_CONFIG)
-
+        u.check_inputs(data_collection=collection, etl_config=s.ETL_CONFIG)
     except NameError as e:
-        logging.error(f"Unknown data collection or table: {collection} {table_name}")
         raise f.HTTPException(status_code=404, detail=str(e))
+
+    # ensure the requested table_name is actually staged
+    # (present in _metadata)
+    # Not enouch to check on ETL_CONFIG
+    exists_q = u.generate_select_sql(
+        from_table="_metadata",
+        cols=["column_name"],
+        where="data_collection = ? AND table_name = ?"
+    )
+    exists_df = read_sql_as_frame(
+        conn_path=s.DB_PATH,
+        query=exists_q,
+        query_params=(collection, table_name)
+    )
+    if exists_df.empty:
+        raise f.HTTPException(
+            status_code=404,
+            detail=f"Table '{table_name}' is not staged for collection '{collection}'."
+        )
 
     # parse filters (string to dict)
     try:
