@@ -11,7 +11,7 @@ QUEENS (QUEryable Energy National Statistics) is a Python package that:
 - serves the staged data via FastAPI,  
 - exposes a CLI and Python facade for querying and export.  
 
-Think of it as the royal counterpart to DUKES 👑 — a principled, machine-readable layer over DESNZ publications (DUKES, Energy Trends).  
+Think of it as the royal counterpart to DUKES — a principled, machine-readable layer over DESNZ publications (DUKES, Energy Trends etc.).  
 
 ---
 
@@ -91,7 +91,7 @@ print(df.head())
 
 ## Key ideas (at a glance)
 
-- **Read from GOB.UK**: data are sourced directly from the official source, ensuring consistency with the publicly available version.
+- **Read from GOV.UK**: data are sourced directly from the official source, ensuring consistency with the publicly available version.
 - **RAW → PROD**: raw ingests are versioned; staging creates a consistent **snapshot** per table in `*_prod`.
 - **Strict validation**: schema and dtypes enforced; duplicates rejected; metadata (`_metadata`) is rebuilt on stage.
 - **Queryable API**: `/data/{collection}` with **JSON filters** (flat or nested, `$or` supported), cursor pagination by `rowid`.
