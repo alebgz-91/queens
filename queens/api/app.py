@@ -40,7 +40,6 @@ app = f.FastAPI(
 # -----------------
 
 @app.get("/data/{collection}")
-@app.get("/{collection}")
 def get_data(
     collection: str = f.Path(..., description="Data collection key, e.g. 'dukes'"),
     table_name: str = f.Query(..., description="Table identifier within the collection, e.g. '1.1'"),
