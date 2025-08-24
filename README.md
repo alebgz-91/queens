@@ -111,7 +111,7 @@ print(df.head())
 
 ## Version history
 ```
-0.1.0 - August 2025
+0.1.1 - 24 August 2025
 ```
 
 ## Aythor and contacts
