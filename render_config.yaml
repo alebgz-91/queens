@@ -1,0 +1,11 @@
+
+services:
+  - type: web
+    name: queens
+    env: python
+    plan: free
+    buildCommand: |
+      pip install --upgrade pip
+      pip install queens
+    startCommand: ./render_start.sh
+    autoDeploy: true

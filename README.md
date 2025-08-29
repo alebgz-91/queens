@@ -17,7 +17,7 @@ Think of it as the royal counterpart to DUKES — a principled, machine-readable
 
 ## Why this exists  
 
-I used to work in the Energy Statistics team, producing collaborating at the publication of DUKES and related collections. We constantly received requests from policy colleagues and modellers for data and insights that required considerable manual manipulation of the published tables.  
+I used to work in the Energy Statistics team, collaborating at the publication of DUKES and related collections. We constantly received requests from policy colleagues and modellers for data and insights that required considerable manual manipulation of the published tables.  
 
 I always wished there was a queryable counterpart to the public-facing Excel files — something that preserved the authority of the published stats, but removed the drudgery.  
 
