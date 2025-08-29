@@ -212,7 +212,7 @@ def export(
 
 @app.command()
 def serve(
-    host: str = typer.Option("127.0.0.1", "--port"),
+    host: str = typer.Option("127.0.0.1", "--host"),
     port: int =  typer.Option(8000, "--port"),
     reload: bool = typer.Option(False, "--reload", help="Dev reload (spawns reloader process)"),
     log_level: str = typer.Option("info", "--log-level")
