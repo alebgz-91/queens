@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "queens"                    # change if taken on PyPI (e.g. "queens-energy")
-version = "0.1.1"
+version = "0.1.2"
 description = "QUEENS (Queryable Energy National Statistics) — ETL + API + CLI for UK energy data."
 readme = "README.md"
 requires-python = ">=3.9"
