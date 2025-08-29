@@ -22,4 +22,5 @@ echo "[startup] Configuring queens paths..."
 queens config --db-path "$DB_PATH"
 
 echo "[startup] Launching API..."
-exec queens serve --host 0.0.0.0 --port "${PORT:-8000}" --log-level debug
+exec uvicorn queens.api.app:app --host 0.0.0.0 --port "${PORT:-8000}" --log-level debug
+
