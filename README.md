@@ -13,7 +13,7 @@ QUEENS (QUEryable Energy National Statistics) is a Python package that:
 
 Think of it as the royal counterpart to DUKES — a principled, machine-readable layer over DESNZ publications (DUKES, Energy Trends etc.).  
 
-There is a live demo on Render, with a sample database holding all transformed DUKES 2025 tables.
+There is a live demo hosted on Render, with a sample database (all of DUKES 2025).
 - Live API base url: [https://queens-5stl.onrender.com]()
 - Docs/Swagger: [https://queens-5stl.onrender.com/docs]()
 

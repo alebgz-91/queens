@@ -159,7 +159,7 @@ def get_data(
         raise f.HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
     if df is None or df.empty:
-        return {"data": [], "next_cursor": None}
+        return {"data": [], "next_cursor": None, "table_description": None}
 
     # optimistic last-page check
     if len(df) < limit:
