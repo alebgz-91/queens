@@ -1,10 +1,3 @@
-set -euo pipefail
-
-# download demo DB
-mkdir -p ./data
-curl -L -o ./data/queens_demo.db
-
-
 
 #!/usr/bin/env bash
 set -Eeuo pipefail
